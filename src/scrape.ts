@@ -12,7 +12,10 @@ import * as path from 'path';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
+const IMAGES_DIR = path.join(OUTPUT_DIR, 'images');
 const BASE_URL = 'https://sportlabmipt.ru';
+
+let imageCounter = 0;
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -73,7 +76,30 @@ function resolveUrl(href: string): string {
   return BASE_URL + '/' + href;
 }
 
-async function extractChapterContent(page: Page): Promise<{ title: string; html: string }> {
+async function downloadImage(url: string, index: number): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get('content-type') || '';
+    let ext = 'png';
+    if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
+    else if (contentType.includes('gif')) ext = 'gif';
+    else if (contentType.includes('webp')) ext = 'webp';
+    else if (contentType.includes('svg')) ext = 'svg';
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const filename = `img-${index.toString().padStart(4, '0')}.${ext}`;
+    const filepath = path.join(IMAGES_DIR, filename);
+    await fs.writeFile(filepath, buffer);
+
+    return filename;
+  } catch {
+    return null;
+  }
+}
+
+async function extractChapterContent(page: Page): Promise<{ title: string; html: string; imageUrls: string[] }> {
   return await page.evaluate(() => {
     // Find the main content area - Tilda uses t-records containers
     const records = document.querySelectorAll('[data-record-type]');
@@ -83,8 +109,9 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
       || document.querySelector('meta[property="og:title"]')?.getAttribute('content')
       || 'Untitled';
 
-    // Collect content from text blocks, excluding navigation and menu
+    // Collect content from text and image blocks, excluding navigation and menu
     const contentParts: string[] = [];
+    const imageUrls: string[] = [];
 
     records.forEach((record) => {
       const recordType = record.getAttribute('data-record-type');
@@ -104,6 +131,18 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
         const html = (block as HTMLElement).innerHTML;
         if (html.trim()) contentParts.push(html);
       });
+
+      // Get images from this record
+      const images = record.querySelectorAll('img[src]');
+      images.forEach((img) => {
+        const src = img.getAttribute('src');
+        if (src && (src.includes('tildacdn.com') || src.includes('static.tildacdn.com'))) {
+          imageUrls.push(src);
+          // Add image tag to content
+          const alt = img.getAttribute('alt') || '';
+          contentParts.push(`<img src="${src}" alt="${alt}">`);
+        }
+      });
     });
 
     // If no structured content found, try getting all text from t-records
@@ -113,11 +152,20 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
         // Clone and remove unwanted elements
         const clone = allRecords.cloneNode(true) as HTMLElement;
         clone.querySelectorAll('[class*="menu"], .t-btnflex, script, style').forEach(el => el.remove());
+
+        // Extract images
+        clone.querySelectorAll('img[src]').forEach((img) => {
+          const src = img.getAttribute('src');
+          if (src && (src.includes('tildacdn.com') || src.includes('static.tildacdn.com'))) {
+            imageUrls.push(src);
+          }
+        });
+
         contentParts.push(clone.innerHTML);
       }
     }
 
-    return { title, html: contentParts.join('\n\n') };
+    return { title, html: contentParts.join('\n\n'), imageUrls };
   });
 }
 
@@ -208,8 +256,26 @@ async function scrapeChapter(
   // Wait for content to render
   await delay(2000);
 
-  const { title, html } = await extractChapterContent(page);
-  const markdown = turndown.turndown(html);
+  const { title, html, imageUrls } = await extractChapterContent(page);
+
+  // Download images and build URL replacement map
+  const urlMap = new Map<string, string>();
+  for (const imgUrl of imageUrls) {
+    if (!urlMap.has(imgUrl)) {
+      const localFile = await downloadImage(imgUrl, imageCounter++);
+      if (localFile) {
+        urlMap.set(imgUrl, `../images/${localFile}`);
+      }
+    }
+  }
+
+  // Convert to markdown
+  let markdown = turndown.turndown(html);
+
+  // Replace remote image URLs with local paths
+  for (const [remoteUrl, localPath] of urlMap) {
+    markdown = markdown.split(remoteUrl).join(localPath);
+  }
 
   const filename = `${String(index + 1).padStart(3, '0')}-${sanitizeFilename(title)}.md`;
   const filepath = path.join(CHAPTERS_DIR, filename);
@@ -239,6 +305,7 @@ async function main() {
 
   // Create output directories
   await fs.mkdir(CHAPTERS_DIR, { recursive: true });
+  await fs.mkdir(IMAGES_DIR, { recursive: true });
 
   console.log('Launching browser...');
   const browser = await puppeteer.launch({

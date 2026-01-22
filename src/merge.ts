@@ -67,7 +67,9 @@ async function main() {
     const chapterPath = path.join(CHAPTERS_DIR, chapter.filename);
 
     try {
-      const content = await fs.readFile(chapterPath, 'utf-8');
+      let content = await fs.readFile(chapterPath, 'utf-8');
+      // Fix image paths: chapters use ../images/, but book.md is in output/ so use ./images/
+      content = content.replace(/\.\.\/(images\/)/g, './$1');
       parts.push(content);
       parts.push('\n---\n'); // Page break between chapters
       console.log(`  Added: ${chapter.filename}`);
