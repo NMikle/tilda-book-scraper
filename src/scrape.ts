@@ -7,6 +7,7 @@
 
 import puppeteer, { type Page } from 'puppeteer';
 import TurndownService from 'turndown';
+import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -81,17 +82,15 @@ async function downloadImage(url: string, index: number): Promise<string | null>
     const response = await fetch(url);
     if (!response.ok) return null;
 
-    const contentType = response.headers.get('content-type') || '';
-    let ext = 'png';
-    if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = 'jpg';
-    else if (contentType.includes('gif')) ext = 'gif';
-    else if (contentType.includes('webp')) ext = 'webp';
-    else if (contentType.includes('svg')) ext = 'svg';
-
     const buffer = Buffer.from(await response.arrayBuffer());
-    const filename = `img-${index.toString().padStart(4, '0')}.${ext}`;
+    const filename = `img-${index.toString().padStart(4, '0')}.jpg`;
     const filepath = path.join(IMAGES_DIR, filename);
-    await fs.writeFile(filepath, buffer);
+
+    // Convert all images to JPEG with white background (handles transparency)
+    await sharp(buffer)
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({ quality: 90 })
+      .toFile(filepath);
 
     return filename;
   } catch {
