@@ -1,0 +1,26 @@
+{
+  "name": "book-scraper",
+  "version": "0.0.1",
+  "description": "Scrape books from sportlabmipt.ru, convert to markdown, and generate PDF",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "scrape": "tsx src/scrape.ts",
+    "merge": "tsx src/merge.ts",
+    "pdf": "tsx src/pdf.ts",
+    "all": "tsx src/index.ts"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/turndown": "^5.0.5",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "md-to-pdf": "^5.2.4",
+    "puppeteer": "^23.10.0",
+    "tsx": "^4.19.0",
+    "turndown": "^7.2.0"
+  }
+}
