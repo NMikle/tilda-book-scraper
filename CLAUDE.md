@@ -9,27 +9,34 @@ Scrape book content from sportlabmipt.ru (a Tilda-based site), convert chapters 
 ## Commands
 
 ```bash
-npm install          # Install dependencies
-npm run scrape       # Scrape chapters to output/chapters/*.md
-npm run merge        # Merge chapters into output/book.md
-npm run pdf          # Convert to output/book.pdf
-npm run all          # Run full pipeline
+npm install                                        # Install dependencies
+npm run scrape -- <url>                            # Scrape chapters to output/chapters/*.md
+npm run merge                                      # Merge chapters into output/book.md
+npm run pdf                                        # Convert to output/book.pdf
+npm run all -- <url>                               # Run full pipeline
+```
+
+**Examples:**
+```bash
+npm run all -- https://sportlabmipt.ru/biongr001
+npm run all -- https://sportlabmipt.ru/sportsphysyologybook
 ```
 
 ## Architecture
 
 ```
 src/
-  scrape.ts   # Puppeteer scraper → markdown via Turndown
-  merge.ts    # Concatenate chapter files in order
-  pdf.ts      # md-to-pdf conversion
-  index.ts    # Full pipeline orchestration
+  scrape.ts    # Puppeteer scraper → markdown via Turndown
+  merge.ts     # Concatenate chapter files with TOC
+  pdf.ts       # md-to-pdf conversion with custom styles
+  index.ts     # Full pipeline orchestration
+  styles.css   # PDF typography styles
 
-output/       # Generated files (gitignored)
-  chapters/   # Individual chapter markdown files
-  meta.json   # Chapter order and metadata
-  book.md     # Merged document
-  book.pdf    # Final output
+output/        # Generated files (gitignored)
+  chapters/    # Individual chapter markdown files (001-title.md, 002-title.md, ...)
+  meta.json    # Chapter order, titles, URLs
+  book.md      # Merged document with TOC
+  book.pdf     # Final styled PDF
 ```
 
 ## Tech Stack
@@ -38,9 +45,20 @@ output/       # Generated files (gitignored)
 - **Turndown** - HTML to Markdown conversion
 - **md-to-pdf** - Markdown to styled PDF
 
+## How the Scraper Works
+
+1. Navigates to start URL with realistic Chrome user-agent
+2. Detects if page is a TOC (>20 links) or a chapter page
+3. For chapter pages: follows "Следующая →" (Next) links automatically
+4. Extracts content from Tilda text blocks (`t-text`, `t-title`, etc.)
+5. Skips menus, navigation buttons, and non-content blocks
+6. Converts HTML to Markdown, saves each chapter separately
+7. Writes metadata JSON with chapter order for merge step
+
 ## Site-Specific Notes
 
-- sportlabmipt.ru is built on Tilda; content lives in `t-records` containers
-- Has bot detection via user-agent check - use realistic browser UA
-- URL patterns are inconsistent: some use slugs (`/biongr001`), others use IDs (`/page89044496.html`)
-- Add delays between requests to avoid rate limiting
+- sportlabmipt.ru is built on Tilda; content lives in `[data-record-type]` containers
+- Has bot detection via user-agent check - scraper uses realistic Chrome UA
+- URL patterns are inconsistent: slugs (`/biongr001`) and IDs (`/page89044496.html`)
+- 2-3 second delays between requests to avoid rate limiting
+- Russian text uses UTF-8 encoding
