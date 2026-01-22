@@ -39,6 +39,26 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function progressBar(current: number, total: number, title: string): void {
+  const barWidth = 30;
+  const percent = Math.round((current / total) * 100);
+  const filled = Math.round((current / total) * barWidth);
+  const empty = barWidth - filled;
+  const bar = '='.repeat(filled) + ' '.repeat(empty);
+
+  // Truncate title to fit in terminal
+  const maxTitleLen = 40;
+  const shortTitle = title.length > maxTitleLen
+    ? title.slice(0, maxTitleLen - 3) + '...'
+    : title.padEnd(maxTitleLen);
+
+  process.stdout.write(`\r[${bar}] ${percent.toString().padStart(3)}% (${current}/${total}) ${shortTitle}`);
+
+  if (current === total) {
+    process.stdout.write('\n');
+  }
+}
+
 function sanitizeFilename(title: string): string {
   return title
     .toLowerCase()
@@ -180,10 +200,9 @@ async function findNextChapterLink(page: Page): Promise<string | null> {
 async function scrapeChapter(
   page: Page,
   url: string,
-  index: number
+  index: number,
+  total?: number
 ): Promise<ChapterMeta> {
-  console.log(`  [${index + 1}] Navigating to: ${url}`);
-
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
   // Wait for content to render
@@ -199,7 +218,12 @@ async function scrapeChapter(
   const content = markdown.startsWith('#') ? markdown : `# ${title}\n\n${markdown}`;
   await fs.writeFile(filepath, content, 'utf-8');
 
-  console.log(`  [${index + 1}] Saved: ${filename} (${title})`);
+  // Show progress bar if total is known, otherwise simple log
+  if (total) {
+    progressBar(index + 1, total, title);
+  } else {
+    console.log(`  [${index + 1}] ${title}`);
+  }
 
   return { index, title, url, filename };
 }
@@ -248,21 +272,20 @@ async function main() {
 
     if (links.length > 20) {
       // This looks like a TOC page - scrape all linked chapters
-      console.log(`Found ${links.length} chapter links. Scraping all chapters...`);
+      console.log(`Found ${links.length} chapters. Scraping...\n`);
 
       for (let i = 0; i < links.length; i++) {
-        const chapterMeta = await scrapeChapter(page, links[i], i);
+        const chapterMeta = await scrapeChapter(page, links[i], i, links.length);
         meta.chapters.push(chapterMeta);
 
         // Rate limiting - wait between chapters
         if (i < links.length - 1) {
-          console.log('  Waiting before next chapter...');
           await delay(2000 + Math.random() * 1000);
         }
       }
     } else {
       // This is a chapter page - follow "next" links
-      console.log('Starting from chapter page, following navigation links...');
+      console.log('Following navigation links...\n');
 
       let currentUrl: string | null = startUrl;
       let index = 0;
@@ -277,7 +300,6 @@ async function main() {
         if (nextUrl && !meta.chapters.some(c => c.url === nextUrl)) {
           currentUrl = nextUrl;
           index++;
-          console.log('  Waiting before next chapter...');
           await delay(2000 + Math.random() * 1000);
         } else {
           currentUrl = null;
