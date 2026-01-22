@@ -7,10 +7,86 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-// TODO: Implement merge logic
-// 1. Read output/meta.json for chapter order
-// 2. Read each chapter file in order
-// 3. Concatenate with page breaks
-// 4. Write to output/book.md
+const OUTPUT_DIR = 'output';
+const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
+const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
+const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 
-console.log('Merge not yet implemented');
+interface ChapterMeta {
+  index: number;
+  title: string;
+  url: string;
+  filename: string;
+}
+
+interface BookMeta {
+  scrapedAt: string;
+  startUrl: string;
+  chapters: ChapterMeta[];
+}
+
+async function main() {
+  // Check if meta.json exists
+  try {
+    await fs.access(META_FILE);
+  } catch {
+    console.error(`Error: ${META_FILE} not found. Run 'npm run scrape' first.`);
+    process.exit(1);
+  }
+
+  // Read metadata
+  const metaContent = await fs.readFile(META_FILE, 'utf-8');
+  const meta: BookMeta = JSON.parse(metaContent);
+
+  if (meta.chapters.length === 0) {
+    console.error('Error: No chapters found in metadata.');
+    process.exit(1);
+  }
+
+  console.log(`Merging ${meta.chapters.length} chapters...`);
+
+  const parts: string[] = [];
+
+  // Add a title page with metadata
+  parts.push(`# Book\n`);
+  parts.push(`Scraped from: ${meta.startUrl}`);
+  parts.push(`Date: ${new Date(meta.scrapedAt).toLocaleDateString()}`);
+  parts.push(`Chapters: ${meta.chapters.length}`);
+  parts.push('\n---\n');
+
+  // Add table of contents
+  parts.push('## Table of Contents\n');
+  for (const chapter of meta.chapters) {
+    const anchor = chapter.title.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '-');
+    parts.push(`${chapter.index + 1}. [${chapter.title}](#${anchor})`);
+  }
+  parts.push('\n---\n');
+
+  // Read and concatenate each chapter
+  for (const chapter of meta.chapters) {
+    const chapterPath = path.join(CHAPTERS_DIR, chapter.filename);
+
+    try {
+      const content = await fs.readFile(chapterPath, 'utf-8');
+      parts.push(content);
+      parts.push('\n---\n'); // Page break between chapters
+      console.log(`  Added: ${chapter.filename}`);
+    } catch (error) {
+      console.error(`  Warning: Could not read ${chapter.filename}, skipping.`);
+    }
+  }
+
+  // Write merged document
+  const merged = parts.join('\n');
+  await fs.writeFile(OUTPUT_FILE, merged, 'utf-8');
+
+  const stats = await fs.stat(OUTPUT_FILE);
+  const sizeKb = (stats.size / 1024).toFixed(1);
+
+  console.log(`\nMerged document saved to: ${OUTPUT_FILE} (${sizeKb} KB)`);
+}
+
+main().catch((error) => {
+  console.error('Error:', error);
+  process.exit(1);
+});
