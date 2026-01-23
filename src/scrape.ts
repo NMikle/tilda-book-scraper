@@ -283,21 +283,26 @@ async function scrapeChapter(
   index: number,
   total?: number
 ): Promise<ChapterMeta> {
-  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-  // Wait for content to render
-  await delay(2000);
+  // Wait for JS to render content
+  await delay(1000);
 
   const { title, html, imageUrls } = await extractChapterContent(page);
 
-  // Download images and build URL replacement map
+  // Download images in parallel
+  const uniqueUrls = [...new Set(imageUrls)];
+  const downloadPromises = uniqueUrls.map(async (imgUrl) => {
+    const imgIndex = imageCounter++;
+    const localFile = await downloadImage(imgUrl, imgIndex);
+    return { imgUrl, localFile };
+  });
+
+  const results = await Promise.all(downloadPromises);
   const urlMap = new Map<string, string>();
-  for (const imgUrl of imageUrls) {
-    if (!urlMap.has(imgUrl)) {
-      const localFile = await downloadImage(imgUrl, imageCounter++);
-      if (localFile) {
-        urlMap.set(imgUrl, `../images/${localFile}`);
-      }
+  for (const { imgUrl, localFile } of results) {
+    if (localFile) {
+      urlMap.set(imgUrl, `../images/${localFile}`);
     }
   }
 
@@ -363,8 +368,8 @@ async function main() {
 
   try {
     console.log(`Navigating to start URL: ${startUrl}`);
-    await page.goto(startUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    await delay(2000);
+    await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await delay(1000);
 
     // Check if this is a TOC page (has multiple chapter links) or a chapter page
     const links = await extractTocLinks(page);
@@ -379,7 +384,7 @@ async function main() {
 
         // Rate limiting - wait between chapters
         if (i < links.length - 1) {
-          await delay(2000 + Math.random() * 1000);
+          await delay(1000 + Math.random() * 500);
         }
       }
     } else {
@@ -399,7 +404,7 @@ async function main() {
         if (nextUrl && !meta.chapters.some(c => c.url === nextUrl)) {
           currentUrl = nextUrl;
           index++;
-          await delay(2000 + Math.random() * 1000);
+          await delay(1000 + Math.random() * 500);
         } else {
           currentUrl = null;
         }
