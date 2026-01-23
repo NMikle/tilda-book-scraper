@@ -1,8 +1,8 @@
 /**
  * Scrape book chapters from sportlabmipt.ru
  *
- * Usage: npm run scrape -- <start-url>
- * Example: npm run scrape -- https://sportlabmipt.ru/sportsphysyologybook
+ * Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]
+ * Example: npm run scrape -- https://sportlabmipt.ru/sportsphysyologybook --wait 1000 --delay 1000
  */
 
 import puppeteer, { type Page } from 'puppeteer';
@@ -16,7 +16,38 @@ const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
 const IMAGES_DIR = path.join(OUTPUT_DIR, 'images');
 const BASE_URL = 'https://sportlabmipt.ru';
 
+// Default timing values (in ms)
+const DEFAULT_PAGE_WAIT = 1000;    // Wait after page load for JS rendering
+const DEFAULT_CHAPTER_DELAY = 1000; // Delay between chapters (+ random 0-500ms)
+
 let imageCounter = 0;
+
+interface ScraperOptions {
+  startUrl: string;
+  pageWait: number;
+  chapterDelay: number;
+}
+
+function parseArgs(): ScraperOptions {
+  const args = process.argv.slice(2);
+  let startUrl = '';
+  let pageWait = DEFAULT_PAGE_WAIT;
+  let chapterDelay = DEFAULT_CHAPTER_DELAY;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--wait' && args[i + 1]) {
+      pageWait = parseInt(args[i + 1], 10);
+      i++;
+    } else if (args[i] === '--delay' && args[i + 1]) {
+      chapterDelay = parseInt(args[i + 1], 10);
+      i++;
+    } else if (!args[i].startsWith('--')) {
+      startUrl = args[i];
+    }
+  }
+
+  return { startUrl, pageWait, chapterDelay };
+}
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -281,12 +312,13 @@ async function scrapeChapter(
   page: Page,
   url: string,
   index: number,
-  total?: number
+  total: number | undefined,
+  pageWait: number
 ): Promise<ChapterMeta> {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
   // Wait for JS to render content
-  await delay(1000);
+  await delay(pageWait);
 
   const { title, html, imageUrls } = await extractChapterContent(page);
 
@@ -332,11 +364,14 @@ async function scrapeChapter(
 }
 
 async function main() {
-  const startUrl = process.argv[2];
+  const { startUrl, pageWait, chapterDelay } = parseArgs();
 
   if (!startUrl) {
-    console.error('Usage: npm run scrape -- <start-url>');
+    console.error('Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]');
     console.error('Example: npm run scrape -- https://sportlabmipt.ru/sportsphysyologybook');
+    console.error('Options:');
+    console.error('  --wait ms    Page render wait time (default: 1000)');
+    console.error('  --delay ms   Delay between chapters (default: 1000)');
     process.exit(1);
   }
 
@@ -369,7 +404,7 @@ async function main() {
   try {
     console.log(`Navigating to start URL: ${startUrl}`);
     await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await delay(1000);
+    await delay(pageWait);
 
     // Check if this is a TOC page (has multiple chapter links) or a chapter page
     const links = await extractTocLinks(page);
@@ -379,12 +414,12 @@ async function main() {
       console.log(`Found ${links.length} chapters. Scraping...\n`);
 
       for (let i = 0; i < links.length; i++) {
-        const chapterMeta = await scrapeChapter(page, links[i], i, links.length);
+        const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait);
         meta.chapters.push(chapterMeta);
 
         // Rate limiting - wait between chapters
         if (i < links.length - 1) {
-          await delay(1000 + Math.random() * 500);
+          await delay(chapterDelay + Math.random() * 500);
         }
       }
     } else {
@@ -395,7 +430,7 @@ async function main() {
       let index = 0;
 
       while (currentUrl) {
-        const chapterMeta = await scrapeChapter(page, currentUrl, index);
+        const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait);
         meta.chapters.push(chapterMeta);
 
         // Find next chapter link
@@ -404,7 +439,7 @@ async function main() {
         if (nextUrl && !meta.chapters.some(c => c.url === nextUrl)) {
           currentUrl = nextUrl;
           index++;
-          await delay(1000 + Math.random() * 500);
+          await delay(chapterDelay + Math.random() * 500);
         } else {
           currentUrl = null;
         }

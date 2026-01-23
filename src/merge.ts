@@ -1,7 +1,7 @@
 /**
  * Merge chapter markdown files into a single document
  *
- * Usage: npm run merge
+ * Usage: npm run merge [-- --name "Book Title"]
  */
 
 import * as fs from 'fs/promises';
@@ -25,7 +25,23 @@ interface BookMeta {
   chapters: ChapterMeta[];
 }
 
+function parseArgs(): { name: string } {
+  const args = process.argv.slice(2);
+  let name = 'Book';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--name' && args[i + 1]) {
+      name = args[i + 1];
+      i++;
+    }
+  }
+
+  return { name };
+}
+
 async function main() {
+  const { name } = parseArgs();
+
   // Check if meta.json exists
   try {
     await fs.access(META_FILE);
@@ -48,7 +64,7 @@ async function main() {
   const parts: string[] = [];
 
   // Add a title page with metadata
-  parts.push(`# Book\n`);
+  parts.push(`# ${name}\n`);
   parts.push(`Scraped from: ${meta.startUrl}`);
   parts.push(`Date: ${new Date(meta.scrapedAt).toLocaleDateString()}`);
   parts.push(`Chapters: ${meta.chapters.length}`);
