@@ -1,8 +1,8 @@
 /**
- * Scrape book chapters from sportlabmipt.ru
+ * Scrape book chapters from Tilda-based websites
  *
  * Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]
- * Example: npm run scrape -- https://sportlabmipt.ru/sportsphysyologybook --wait 1000 --delay 1000
+ * Example: npm run scrape -- https://example.com/book --wait 1000 --delay 1000
  */
 
 import puppeteer, { type Page } from 'puppeteer';
@@ -14,7 +14,6 @@ import * as path from 'path';
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
 const IMAGES_DIR = path.join(OUTPUT_DIR, 'images');
-const BASE_URL = 'https://sportlabmipt.ru';
 
 // Default timing values (in ms)
 const DEFAULT_PAGE_WAIT = 1000;    // Wait after page load for JS rendering
@@ -102,10 +101,9 @@ function sanitizeFilename(title: string): string {
     .slice(0, 50);
 }
 
-function resolveUrl(href: string): string {
-  if (href.startsWith('http')) return href;
-  if (href.startsWith('/')) return BASE_URL + href;
-  return BASE_URL + '/' + href;
+function getBaseUrl(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.protocol}//${parsed.host}`;
 }
 
 function transformTildaImageUrl(url: string): string {
@@ -232,8 +230,9 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
   });
 }
 
-async function extractTocLinks(page: Page): Promise<string[]> {
-  return await page.evaluate((baseUrl) => {
+async function extractTocLinks(page: Page, baseUrl: string): Promise<string[]> {
+  const baseHost = new URL(baseUrl).host;
+  return await page.evaluate((baseUrl, baseHost) => {
     const links: string[] = [];
     const seen = new Set<string>();
     const currentPath = window.location.pathname;
@@ -258,18 +257,18 @@ async function extractTocLinks(page: Page): Promise<string[]> {
         fullUrl = href.startsWith('/') ? baseUrl + href : baseUrl + '/' + href;
       }
 
-      // Only include links to sportlabmipt.ru
-      if (!fullUrl.includes('sportlabmipt.ru')) return;
+      // Only include links to the same host
+      try {
+        if (new URL(fullUrl).host !== baseHost) return;
+      } catch {
+        return;
+      }
 
       // Extract path from full URL
       const urlPath = new URL(fullUrl).pathname;
 
       // Skip homepage
       if (urlPath === '/' || urlPath === '') return;
-
-      // Skip common non-content pages
-      if (urlPath === '/guides' || urlPath === '/contacts') return;
-      if (urlPath.includes('/page') && urlPath.includes('.html') === false) return;
 
       // Skip links in menu/navigation elements
       if (a.closest('[class*="menu"]') || a.closest('[class*="nav"]')) return;
@@ -285,17 +284,17 @@ async function extractTocLinks(page: Page): Promise<string[]> {
     });
 
     return links;
-  }, BASE_URL);
+  }, baseUrl, baseHost);
 }
 
-async function findNextChapterLink(page: Page): Promise<string | null> {
+async function findNextChapterLink(page: Page, baseUrl: string): Promise<string | null> {
   return await page.evaluate((baseUrl) => {
     // Look for "next" navigation button
     const nextButtons = document.querySelectorAll('a[href]');
     for (const btn of nextButtons) {
       const text = btn.textContent?.toLowerCase() || '';
-      // Russian: "следующая" (next), "далее" (forward), "→"
-      if (text.includes('следующ') || text.includes('далее') || text.includes('→')) {
+      // Common patterns: "next", "следующая" (Russian), "далее" (forward), "→"
+      if (text.includes('next') || text.includes('следующ') || text.includes('далее') || text.includes('→')) {
         const href = btn.getAttribute('href');
         if (href && !href.startsWith('#')) {
           if (href.startsWith('http')) return href;
@@ -305,7 +304,7 @@ async function findNextChapterLink(page: Page): Promise<string | null> {
       }
     }
     return null;
-  }, BASE_URL);
+  }, baseUrl);
 }
 
 async function scrapeChapter(
@@ -368,12 +367,14 @@ async function main() {
 
   if (!startUrl) {
     console.error('Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]');
-    console.error('Example: npm run scrape -- https://sportlabmipt.ru/sportsphysyologybook');
+    console.error('Example: npm run scrape -- https://example.com/book');
     console.error('Options:');
     console.error('  --wait ms    Page render wait time (default: 1000)');
     console.error('  --delay ms   Delay between chapters (default: 1000)');
     process.exit(1);
   }
+
+  const baseUrl = getBaseUrl(startUrl);
 
   // Create output directories
   await fs.mkdir(CHAPTERS_DIR, { recursive: true });
@@ -407,7 +408,7 @@ async function main() {
     await delay(pageWait);
 
     // Check if this is a TOC page (has multiple chapter links) or a chapter page
-    const links = await extractTocLinks(page);
+    const links = await extractTocLinks(page, baseUrl);
 
     if (links.length > 20) {
       // This looks like a TOC page - scrape all linked chapters
@@ -434,7 +435,7 @@ async function main() {
         meta.chapters.push(chapterMeta);
 
         // Find next chapter link
-        const nextUrl = await findNextChapterLink(page);
+        const nextUrl = await findNextChapterLink(page, baseUrl);
 
         if (nextUrl && !meta.chapters.some(c => c.url === nextUrl)) {
           currentUrl = nextUrl;

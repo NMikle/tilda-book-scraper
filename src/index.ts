@@ -50,7 +50,7 @@ async function main() {
 
   if (!startUrl) {
     console.error('Usage: npm run all -- <start-url> [options]');
-    console.error('Example: npm run all -- https://sportlabmipt.ru/sportsphysyologybook --name "Физиология спорта"');
+    console.error('Example: npm run all -- https://example.com/book --name "My Book"');
     console.error('Options:');
     console.error('  --name "title"  Book title (default: "Book")');
     console.error('  --wait ms       Page render wait time (default: 1000)');
