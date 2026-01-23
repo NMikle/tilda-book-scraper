@@ -10,16 +10,23 @@ Scrape book content from sportlabmipt.ru (a Tilda-based site), convert chapters 
 
 ```bash
 npm install                                        # Install dependencies
-npm run scrape -- <url>                            # Scrape chapters to output/chapters/*.md
-npm run merge                                      # Merge chapters into output/book.md
+npm run scrape -- <url> [options]                  # Scrape chapters to output/chapters/*.md
+npm run merge [-- --name "title"]                  # Merge chapters into output/book.md
 npm run pdf                                        # Convert to output/book.pdf
-npm run all -- <url>                               # Run full pipeline
+npm run all -- <url> [options]                     # Run full pipeline
 ```
+
+**Options:**
+- `--name "title"` - Book title for PDF cover (default: "Book")
+- `--wait ms` - Page render wait time in milliseconds (default: 1000)
+- `--delay ms` - Delay between chapters in milliseconds (default: 1000)
 
 **Examples:**
 ```bash
-npm run all -- https://sportlabmipt.ru/biongr001
-npm run all -- https://sportlabmipt.ru/sportsphysyologybook
+npm run all -- https://sportlabmipt.ru/sportsphysyologybook --name "Физиология спорта"
+npm run all -- https://sportlabmipt.ru/biongr001 --name "БИОМЕХАНИКА" --wait 2000 --delay 1500
+npm run scrape -- https://sportlabmipt.ru/biongr001 --wait 500 --delay 500
+npm run merge -- --name "My Book Title"
 ```
 
 ## Architecture
@@ -62,7 +69,7 @@ output/        # Generated files (gitignored)
 - sportlabmipt.ru is built on Tilda; content lives in `[data-record-type]` containers
 - Has bot detection via user-agent check - scraper uses realistic Chrome UA
 - URL patterns are inconsistent: slugs (`/biongr001`) and IDs (`/page89044496.html`)
-- 2-3 second delays between requests to avoid rate limiting
+- Configurable delays between requests (default 1s, adjustable via --delay)
 - Russian text uses UTF-8 encoding
 
 ### Tilda Image CDN
