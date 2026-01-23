@@ -2,6 +2,15 @@
   "name": "tilda-book-scraper",
   "version": "0.0.1",
   "description": "Scrape book content from Tilda-based websites, convert to markdown, and generate PDF",
+  "author": {
+    "name": "Mikhail Niakrasau",
+    "url": "https://nmikle.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nmikle/tilda-book-scraper.git"
+  },
+  "homepage": "https://github.com/nmikle/tilda-book-scraper",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -10,7 +19,15 @@
     "pdf": "tsx src/pdf.ts",
     "all": "tsx src/index.ts"
   },
-  "keywords": [],
+  "keywords": [
+    "tilda",
+    "scraper",
+    "book",
+    "pdf",
+    "markdown",
+    "puppeteer",
+    "web-scraping"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.10.0",

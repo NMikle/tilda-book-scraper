@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-Scrape book content from sportlabmipt.ru (a Tilda-based site), convert chapters to markdown with images, merge them, and generate a PDF. Built to automate manual copy-pasting of book text.
+Scrape book content from Tilda-based websites, convert chapters to markdown with images, merge them, and generate a PDF. Built to automate manual copy-pasting of book text.
 
 ## Commands
 
@@ -23,9 +23,9 @@ npm run all -- <url> [options]                     # Run full pipeline
 
 **Examples:**
 ```bash
-npm run all -- https://sportlabmipt.ru/sportsphysyologybook --name "Физиология спорта"
-npm run all -- https://sportlabmipt.ru/biongr001 --name "БИОМЕХАНИКА" --wait 2000 --delay 1500
-npm run scrape -- https://sportlabmipt.ru/biongr001 --wait 500 --delay 500
+npm run all -- https://example.com/book --name "My Book"
+npm run all -- https://example.com/another-book --name "Another Book" --wait 2000 --delay 1500
+npm run scrape -- https://example.com/book --wait 500 --delay 500
 npm run merge -- --name "My Book Title"
 ```
 
@@ -58,19 +58,19 @@ output/        # Generated files (gitignored)
 
 1. Navigates to start URL with realistic Chrome user-agent
 2. Detects if page is a TOC (>20 links) or a chapter page
-3. For chapter pages: follows "Следующая →" (Next) links automatically
+3. For chapter pages: follows "Next" / "→" navigation links automatically
 4. Extracts content from Tilda text blocks (`t-text`, `t-title`, etc.)
 5. Downloads images, transforms placeholder URLs, converts to JPEG
 6. Converts HTML to Markdown, saves each chapter separately
 7. Writes metadata JSON with chapter order for merge step
 
-## Site-Specific Notes
+## Tilda Platform Notes
 
-- sportlabmipt.ru is built on Tilda; content lives in `[data-record-type]` containers
-- Has bot detection via user-agent check - scraper uses realistic Chrome UA
-- URL patterns are inconsistent: slugs (`/biongr001`) and IDs (`/page89044496.html`)
+- Tilda sites store content in `[data-record-type]` containers
+- Some sites have bot detection via user-agent - scraper uses realistic Chrome UA
+- URL patterns vary: slugs (`/book-title`) or IDs (`/page12345.html`)
 - Configurable delays between requests (default 1s, adjustable via --delay)
-- Russian text uses UTF-8 encoding
+- Supports UTF-8 encoding (works with non-Latin text)
 
 ### Tilda Image CDN
 

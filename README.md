@@ -19,7 +19,7 @@ Scrape book content from Tilda-based websites, convert chapters to markdown with
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/tilda-book-scraper.git
+git clone https://github.com/nmikle/tilda-book-scraper.git
 cd tilda-book-scraper
 npm install
 ```
