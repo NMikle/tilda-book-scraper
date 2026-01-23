@@ -1,7 +1,7 @@
 {
-  "name": "book-scraper",
+  "name": "tilda-book-scraper",
   "version": "0.0.1",
-  "description": "Scrape books from sportlabmipt.ru, convert to markdown, and generate PDF",
+  "description": "Scrape book content from Tilda-based websites, convert to markdown, and generate PDF",
   "type": "module",
   "scripts": {
     "build": "tsc",
