@@ -77,12 +77,45 @@ function resolveUrl(href: string): string {
   return BASE_URL + '/' + href;
 }
 
+function transformTildaImageUrl(url: string): string {
+  // Transform placeholder URLs to actual image URLs
+  // thb.tildacdn.com/tildXXXX/-/empty/image.png -> static.tildacdn.com/tildXXXX/image.png
+  if (url.includes('tildacdn.com') && url.includes('/-/empty/')) {
+    // Extract the tild hash and filename
+    const match = url.match(/\/(tild[^/]+)\/-\/empty\/(.+)$/);
+    if (match) {
+      return `https://static.tildacdn.com/${match[1]}/${match[2]}`;
+    }
+  }
+  return url;
+}
+
 async function downloadImage(url: string, index: number): Promise<string | null> {
+  // Transform placeholder URLs to actual image URLs
+  const actualUrl = transformTildaImageUrl(url);
+
   try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
+    const response = await fetch(actualUrl);
+    if (!response.ok) {
+      // If optimized URL fails, try original
+      if (actualUrl !== url) {
+        const fallbackResponse = await fetch(url);
+        if (!fallbackResponse.ok) return null;
+        const buffer = Buffer.from(await fallbackResponse.arrayBuffer());
+        return await saveImage(buffer, index);
+      }
+      return null;
+    }
 
     const buffer = Buffer.from(await response.arrayBuffer());
+    return await saveImage(buffer, index);
+  } catch {
+    return null;
+  }
+}
+
+async function saveImage(buffer: Buffer, index: number): Promise<string | null> {
+  try {
     const filename = `img-${index.toString().padStart(4, '0')}.jpg`;
     const filepath = path.join(IMAGES_DIR, filename);
 
