@@ -4,8 +4,6 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Fix broken TOC links in PDF** - Chapters 2, 4, 19, 24, 34, 49, 51, 59 have broken links from table of contents (trailing spaces/punctuation in titles cause anchor mismatch)
-- [ ] **Add tests for TOC link generation** - Prevent broken links regression by testing that generated anchors match chapter headings
 - [ ] **Increase test coverage to 90%+** - Current coverage is limited to utility functions; add tests for merge.ts, argument parsing, etc.
 
 ## Medium Priority
@@ -29,3 +27,5 @@ Project roadmap and planned improvements.
 - [x] Add `--url-pattern` option to filter URLs by glob pattern
 - [x] Fix deduplication to preserve images
 - [x] Add unit tests with vitest
+- [x] Fix broken TOC links in PDF (trailing spaces/punctuation in titles)
+- [x] Add tests for TOC link generation (generateAnchor)

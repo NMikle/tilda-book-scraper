@@ -4,6 +4,7 @@ import {
   transformTildaImageUrl,
   sanitizeFilename,
   getBaseUrl,
+  generateAnchor,
   deduplicateContentParts,
 } from './utils.js';
 
@@ -135,6 +136,54 @@ describe('getBaseUrl', () => {
 
   it('throws for invalid URLs', () => {
     expect(() => getBaseUrl('not-a-url')).toThrow();
+  });
+});
+
+describe('generateAnchor', () => {
+  it('converts to lowercase and replaces spaces with dashes', () => {
+    expect(generateAnchor('Hello World')).toBe('hello-world');
+  });
+
+  it('handles Cyrillic text', () => {
+    expect(generateAnchor('Скелетные мышцы и их функции')).toBe('скелетные-мышцы-и-их-функции');
+  });
+
+  it('strips trailing spaces and punctuation (fixes broken TOC links)', () => {
+    // These are the actual problematic titles from the book
+    expect(generateAnchor('Опорно-двигательная система, суставы, фасции '))
+      .toBe('опорно-двигательная-система-суставы-фасции');
+    expect(generateAnchor('Нейромышечный синапс '))
+      .toBe('нейромышечный-синапс');
+    expect(generateAnchor('Фазы нейропластичности '))
+      .toBe('фазы-нейропластичности');
+  });
+
+  it('strips leading spaces and punctuation', () => {
+    expect(generateAnchor(' Leading space')).toBe('leading-space');
+    expect(generateAnchor('...Title')).toBe('title');
+  });
+
+  it('handles punctuation at end of title', () => {
+    expect(generateAnchor('Система скелетных рычагов, моменты сил, типы рычагов.'))
+      .toBe('система-скелетных-рычагов-моменты-сил-типы-рычагов');
+  });
+
+  it('handles parentheses in titles', () => {
+    expect(generateAnchor('Миотатический рефлекс (рефлекс на растяжение)'))
+      .toBe('миотатический-рефлекс-рефлекс-на-растяжение');
+    expect(generateAnchor('Центральное (ЦНС) утомление '))
+      .toBe('центральное-цнс-утомление');
+  });
+
+  it('preserves hyphens from original title (GitHub/CommonMark style)', () => {
+    // Space-hyphen-space becomes three hyphens (space→hyphen, original hyphen, space→hyphen)
+    expect(generateAnchor('Title - with dash')).toBe('title---with-dash');
+    expect(generateAnchor('Митохондрии - строение')).toBe('митохондрии---строение');
+  });
+
+  it('handles mixed content', () => {
+    expect(generateAnchor('Chapter 1: Introduction (Part 1)'))
+      .toBe('chapter-1-introduction-part-1');
   });
 });
 

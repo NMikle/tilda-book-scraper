@@ -6,6 +6,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { generateAnchor } from './utils.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
@@ -73,7 +74,7 @@ async function main() {
   // Add table of contents
   parts.push('## Table of Contents\n');
   for (const chapter of meta.chapters) {
-    const anchor = chapter.title.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '-');
+    const anchor = generateAnchor(chapter.title);
     parts.push(`${chapter.index + 1}. [${chapter.title}](#${anchor})`);
   }
   parts.push('\n---\n');

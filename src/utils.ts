@@ -51,6 +51,18 @@ export function getBaseUrl(url: string): string {
 }
 
 /**
+ * Generate a markdown anchor from a heading title
+ * Matches the anchor generation used by most markdown processors (GitHub/CommonMark style)
+ */
+export function generateAnchor(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/ /g, '-')                    // Replace spaces with hyphens
+    .replace(/[^a-zа-яё0-9-]/gi, '')       // Remove non-alphanumeric except hyphens
+    .replace(/^-+|-+$/g, '');              // Strip leading/trailing hyphens
+}
+
+/**
  * Deduplicate content parts by comparing text content (or image src for images)
  * This is used to remove duplicate blocks that Tilda creates for responsive design
  *
