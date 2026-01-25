@@ -84,3 +84,9 @@ Tilda uses placeholder images that must be transformed to get actual content:
 - `static.tildacdn.com/tildXXXX/image.png` → actual image
 
 The scraper automatically transforms these URLs. Images are converted to JPEG with white background (handles transparency issues in PDFs).
+
+## Testing
+
+- **Always run tests before committing** - Run `npm test` and ensure all tests pass before any commit
+- **Strive for 100% coverage** - All new code should have corresponding tests; target full coverage
+- **Never break existing functionality** - If tests fail, fix the issue before committing
