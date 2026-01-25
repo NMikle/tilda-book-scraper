@@ -6,6 +6,26 @@
 
 import { execSync } from 'child_process';
 
+/**
+ * Format duration in milliseconds to human-readable string
+ * Exported for testing
+ */
+export function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes > 0) {
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+  return `${seconds}s`;
+}
+
+export interface StepTiming {
+  step: string;
+  duration: number;
+}
+
 export interface PipelineOptions {
   startUrl: string;
   name: string;
@@ -52,14 +72,21 @@ export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptio
 }
 
 /**
- * Run a shell command with description header
+ * Run a shell command with description header and timing
  * Exported for testing
  */
-export function run(command: string, description: string) {
+export function run(command: string, description: string): StepTiming {
   console.log(`\n${'='.repeat(50)}`);
   console.log(`Step: ${description}`);
   console.log('='.repeat(50));
+
+  const start = Date.now();
   execSync(command, { stdio: 'inherit' });
+  const duration = Date.now() - start;
+
+  console.log(`\n  Completed in ${formatDuration(duration)}`);
+
+  return { step: description, duration };
 }
 
 export async function main() {
@@ -81,6 +108,9 @@ export async function main() {
   console.log(`URL: ${startUrl}`);
   console.log(`Book name: ${name}`);
 
+  const pipelineStart = Date.now();
+  const timings: StepTiming[] = [];
+
   try {
     // Step 1: Scrape - build command with optional filters
     let scrapeCmd = `npx tsx src/scrape.ts "${startUrl}" --wait ${wait} --delay ${delay}`;
@@ -90,17 +120,30 @@ export async function main() {
     if (urlPattern) {
       scrapeCmd += ` --url-pattern "${urlPattern}"`;
     }
-    run(scrapeCmd, 'Scraping chapters');
+    timings.push(run(scrapeCmd, 'Scraping chapters'));
 
     // Step 2: Merge
-    run(`npx tsx src/merge.ts --name "${name}"`, 'Merging chapters');
+    timings.push(run(`npx tsx src/merge.ts --name "${name}"`, 'Merging chapters'));
 
     // Step 3: Generate PDF
-    run('npx tsx src/pdf.ts', 'Generating PDF');
+    timings.push(run('npx tsx src/pdf.ts', 'Generating PDF'));
+
+    const totalDuration = Date.now() - pipelineStart;
 
     console.log('\n' + '='.repeat(50));
     console.log('Pipeline complete!');
     console.log('='.repeat(50));
+
+    // Display timing summary
+    console.log('\nTiming Summary:');
+    console.log('-'.repeat(35));
+    for (const { step, duration } of timings) {
+      const stepName = step.padEnd(20);
+      console.log(`  ${stepName} ${formatDuration(duration)}`);
+    }
+    console.log('-'.repeat(35));
+    console.log(`  ${'Total'.padEnd(20)} ${formatDuration(totalDuration)}`);
+
     console.log('\nOutput files:');
     console.log('  - output/chapters/*.md  (individual chapters)');
     console.log('  - output/meta.json      (metadata)');

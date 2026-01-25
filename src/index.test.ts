@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseArgs, run } from './index.js';
+import { parseArgs, run, formatDuration } from './index.js';
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -7,6 +7,32 @@ vi.mock('child_process', () => ({
 }));
 
 import { execSync } from 'child_process';
+
+describe('formatDuration', () => {
+  it('formats seconds only', () => {
+    expect(formatDuration(5000)).toBe('5s');
+    expect(formatDuration(45000)).toBe('45s');
+  });
+
+  it('formats minutes and seconds', () => {
+    expect(formatDuration(65000)).toBe('1m 5s');
+    expect(formatDuration(125000)).toBe('2m 5s');
+  });
+
+  it('handles zero seconds in minutes', () => {
+    expect(formatDuration(60000)).toBe('1m 0s');
+    expect(formatDuration(120000)).toBe('2m 0s');
+  });
+
+  it('handles zero duration', () => {
+    expect(formatDuration(0)).toBe('0s');
+  });
+
+  it('rounds down milliseconds', () => {
+    expect(formatDuration(5999)).toBe('5s');
+    expect(formatDuration(65999)).toBe('1m 5s');
+  });
+});
 
 describe('parseArgs', () => {
   it('returns defaults when no args provided', () => {
@@ -103,6 +129,22 @@ describe('run', () => {
 
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('='));
     expect(mockConsoleLog).toHaveBeenCalledWith('Step: Test step');
+  });
+
+  it('returns step timing', () => {
+    const result = run('echo test', 'Test step');
+
+    expect(result).toHaveProperty('step', 'Test step');
+    expect(result).toHaveProperty('duration');
+    expect(typeof result.duration).toBe('number');
+  });
+
+  it('logs completion time', () => {
+    run('echo test', 'Test step');
+
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      expect.stringContaining('Completed in')
+    );
   });
 });
 
@@ -230,6 +272,23 @@ describe('main', () => {
     await main();
 
     expect(mockConsoleLog).toHaveBeenCalledWith('Pipeline complete!');
+
+    process.argv = originalArgv;
+  });
+
+  it('displays timing summary', async () => {
+    const originalArgv = process.argv;
+    process.argv = ['node', 'index.ts', 'https://example.com/book'];
+
+    vi.mocked(execSync).mockImplementation(() => Buffer.from(''));
+
+    const { main } = await import('./index.js');
+    await main();
+
+    expect(mockConsoleLog).toHaveBeenCalledWith('\nTiming Summary:');
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      expect.stringContaining('Total')
+    );
 
     process.argv = originalArgv;
   });

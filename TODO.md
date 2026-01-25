@@ -15,8 +15,6 @@ Project roadmap and planned improvements.
 | scrape.ts | 42% | :red_circle: (browser-context code limits this) |
 
 ## Medium Priority
-
-- [ ] **Add elapsed time display** - Show timing for each pipeline step (scrape, merge, pdf) and total elapsed time in a summary table
 - [ ] **Add cover page support** - Option to include a cover image and styled title page in the PDF
 - [ ] **Improve chapter detection** - Better heuristics for distinguishing TOC pages from chapter pages (not just link count)
 
@@ -30,6 +28,7 @@ Project roadmap and planned improvements.
 
 ## Completed
 
+- [x] Add elapsed time display for pipeline steps
 - [x] Deduplicate content blocks during chapter extraction
 - [x] Add `--skip` option to exclude specific URLs
 - [x] Add `--url-pattern` option to filter URLs by glob pattern
