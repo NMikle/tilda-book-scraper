@@ -26,6 +26,22 @@ const IMAGES_DIR = path.join(OUTPUT_DIR, 'images');
 const DEFAULT_PAGE_WAIT = 1000;    // Wait after page load for JS rendering
 const DEFAULT_CHAPTER_DELAY = 1000; // Delay between chapters (+ random 0-500ms)
 
+// Tilda block types to skip during content extraction
+// These are navigation, menu, and non-content blocks
+const TILDA_SKIP_BLOCK_TYPES = [
+  '229',  // Header/menu block
+  '228',  // Header/menu block (alternate)
+  '702',  // Cover/hero block
+  '210',  // Form block
+];
+
+// Realistic Chrome user agent to avoid bot detection
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// Minimum number of links to consider a page as a table of contents
+// Pages with fewer links are treated as chapter pages with "next" navigation
+const TOC_LINK_THRESHOLD = 20;
+
 let imageCounter = 0;
 
 /** Configuration options for the scraper */
@@ -177,7 +193,7 @@ async function saveImage(buffer: Buffer, index: number): Promise<string | null> 
 }
 
 async function extractChapterContent(page: Page): Promise<{ title: string; html: string; imageUrls: string[] }> {
-  return await page.evaluate(() => {
+  return await page.evaluate((skipBlockTypes) => {
     // Find the main content area - Tilda uses t-records containers
     const records = document.querySelectorAll('[data-record-type]');
 
@@ -193,7 +209,7 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
     records.forEach((record) => {
       const recordType = record.getAttribute('data-record-type');
       // Skip menu, cover, and form blocks
-      if (['229', '228', '702', '210'].includes(recordType || '')) return;
+      if (skipBlockTypes.includes(recordType || '')) return;
 
       // Get text content blocks
       const textBlocks = record.querySelectorAll(
@@ -262,7 +278,7 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
     });
 
     return { title, html: uniqueParts.join('\n\n'), imageUrls };
-  });
+  }, TILDA_SKIP_BLOCK_TYPES);
 }
 
 async function extractTocLinks(page: Page, baseUrl: string): Promise<string[]> {
@@ -433,9 +449,7 @@ export async function main(): Promise<void> {
   const page = await browser.newPage();
 
   // Set realistic user agent
-  await page.setUserAgent(
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
+  await page.setUserAgent(DEFAULT_USER_AGENT);
 
   // Set viewport
   await page.setViewport({ width: 1280, height: 800 });
@@ -472,7 +486,7 @@ export async function main(): Promise<void> {
       }
     }
 
-    if (links.length > 20) {
+    if (links.length > TOC_LINK_THRESHOLD) {
       // This looks like a TOC page - scrape all linked chapters
       console.log(`Found ${links.length} chapters. Scraping...\n`);
 
