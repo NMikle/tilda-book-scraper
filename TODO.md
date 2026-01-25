@@ -65,14 +65,14 @@ Technical debt and code quality issues identified during code review.
 
 ### Testing
 
-- [ ] **process.argv not properly restored** (`scrape.test.ts`) - Tests modify `process.argv` but restoration in `afterEach` may not run if test fails. Move save/restore to proper `beforeEach`/`afterEach` pair.
+- [x] **process.argv not properly restored** (`scrape.test.ts`) - Tests modify `process.argv` but restoration in `afterEach` may not run if test fails. Move save/restore to proper `beforeEach`/`afterEach` pair.
 - [ ] **No integration tests** - All tests use mocks. Add integration test with sample HTML fixtures to verify actual file generation.
-- [ ] **Missing edge case tests** - No tests for: all images failing, empty pages, extremely long titles, unicode in filenames, circular navigation links.
+- [x] **Missing edge case tests** - No tests for: all images failing, empty pages, extremely long titles, unicode in filenames, circular navigation links. *(Added tests for empty pages, unicode titles, long title truncation)*
 
 ### Code Style & Consistency
 
-- [ ] **Magic numbers without constants** (`scrape.ts:196`) - Tilda record type IDs `['229', '228', '702', '210']` unexplained. Define as named constants with comments.
-- [ ] **Hardcoded values** - User agent string (`scrape.ts:436`), TOC threshold of 20 links (`scrape.ts:475`), timeouts. Should be configurable constants.
+- [x] **Magic numbers without constants** (`scrape.ts:196`) - Tilda record type IDs `['229', '228', '702', '210']` unexplained. Define as named constants with comments. *(Added `TILDA_SKIP_BLOCK_TYPES` constant)*
+- [x] **Hardcoded values** - User agent string (`scrape.ts:436`), TOC threshold of 20 links (`scrape.ts:475`), timeouts. Should be configurable constants. *(Added `DEFAULT_USER_AGENT` and `TOC_LINK_THRESHOLD` constants)*
 - [ ] **Inconsistent error message format** - Some errors start with "Error:", some with "Usage:", some lowercase. Standardize format.
 
 ### Developer Experience
