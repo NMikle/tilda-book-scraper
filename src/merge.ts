@@ -13,21 +13,24 @@ const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
 const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 
-interface ChapterMeta {
+export interface ChapterMeta {
   index: number;
   title: string;
   url: string;
   filename: string;
 }
 
-interface BookMeta {
+export interface BookMeta {
   scrapedAt: string;
   startUrl: string;
   chapters: ChapterMeta[];
 }
 
-function parseArgs(): { name: string } {
-  const args = process.argv.slice(2);
+/**
+ * Parse command line arguments from an array
+ * Exported for testing
+ */
+export function parseArgs(args: string[] = process.argv.slice(2)): { name: string } {
   let name = 'Book';
 
   for (let i = 0; i < args.length; i++) {
@@ -38,6 +41,24 @@ function parseArgs(): { name: string } {
   }
 
   return { name };
+}
+
+/**
+ * Fix image paths in chapter content
+ * Chapters use ../images/, but book.md is in output/ so use ./images/
+ * Exported for testing
+ */
+export function fixImagePaths(content: string): string {
+  return content.replace(/\.\.\/(images\/)/g, './$1');
+}
+
+/**
+ * Generate a table of contents entry for a chapter
+ * Exported for testing
+ */
+export function generateTocEntry(chapter: ChapterMeta): string {
+  const anchor = generateAnchor(chapter.title);
+  return `${chapter.index + 1}. [${chapter.title}](#${anchor})`;
 }
 
 async function main() {
@@ -74,8 +95,7 @@ async function main() {
   // Add table of contents
   parts.push('## Table of Contents\n');
   for (const chapter of meta.chapters) {
-    const anchor = generateAnchor(chapter.title);
-    parts.push(`${chapter.index + 1}. [${chapter.title}](#${anchor})`);
+    parts.push(generateTocEntry(chapter));
   }
   parts.push('\n---\n');
 
@@ -84,10 +104,8 @@ async function main() {
     const chapterPath = path.join(CHAPTERS_DIR, chapter.filename);
 
     try {
-      let content = await fs.readFile(chapterPath, 'utf-8');
-      // Fix image paths: chapters use ../images/, but book.md is in output/ so use ./images/
-      content = content.replace(/\.\.\/(images\/)/g, './$1');
-      parts.push(content);
+      const content = await fs.readFile(chapterPath, 'utf-8');
+      parts.push(fixImagePaths(content));
       parts.push('\n---\n'); // Page break between chapters
       console.log(`  Added: ${chapter.filename}`);
     } catch (error) {
@@ -105,7 +123,10 @@ async function main() {
   console.log(`\nMerged document saved to: ${OUTPUT_FILE} (${sizeKb} KB)`);
 }
 
-main().catch((error) => {
-  console.error('Error:', error);
-  process.exit(1);
-});
+// Only run main when executed directly (not when imported for testing)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error('Error:', error);
+    process.exit(1);
+  });
+}

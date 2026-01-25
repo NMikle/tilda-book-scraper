@@ -88,5 +88,6 @@ The scraper automatically transforms these URLs. Images are converted to JPEG wi
 ## Testing
 
 - **Always run tests before committing** - Run `npm test` and ensure all tests pass before any commit
-- **Strive for 100% coverage** - All new code should have corresponding tests; target full coverage
+- **Strive for maximum coverage** - All new code should have corresponding tests; target full coverage
+- **Use mocks for external dependencies** - Never test actual puppeteer, fs, or network calls; mock them instead
 - **Never break existing functionality** - If tests fail, fix the issue before committing

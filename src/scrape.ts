@@ -28,7 +28,7 @@ const DEFAULT_CHAPTER_DELAY = 1000; // Delay between chapters (+ random 0-500ms)
 
 let imageCounter = 0;
 
-interface ScraperOptions {
+export interface ScraperOptions {
   startUrl: string;
   pageWait: number;
   chapterDelay: number;
@@ -36,8 +36,11 @@ interface ScraperOptions {
   urlPattern: string | null;
 }
 
-function parseArgs(): ScraperOptions {
-  const args = process.argv.slice(2);
+/**
+ * Parse command line arguments from an array
+ * Exported for testing
+ */
+export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOptions {
   let startUrl = '';
   let pageWait = DEFAULT_PAGE_WAIT;
   let chapterDelay = DEFAULT_CHAPTER_DELAY;
@@ -491,4 +494,7 @@ async function main() {
   }
 }
 
-main();
+// Only run main when executed directly (not when imported for testing)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
