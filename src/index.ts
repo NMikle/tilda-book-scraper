@@ -1,7 +1,7 @@
 /**
  * Run full pipeline: scrape → merge → pdf
  *
- * Usage: npm run all -- <start-url> [--name "Book Title"] [--wait ms] [--delay ms]
+ * Usage: npm run all -- <start-url> [options]
  */
 
 import { execSync } from 'child_process';
@@ -11,6 +11,8 @@ interface PipelineOptions {
   name: string;
   wait: number;
   delay: number;
+  skipUrls: string[];
+  urlPattern: string | null;
 }
 
 function parseArgs(): PipelineOptions {
@@ -19,6 +21,8 @@ function parseArgs(): PipelineOptions {
   let name = 'Book';
   let wait = 1000;
   let delay = 1000;
+  const skipUrls: string[] = [];
+  let urlPattern: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--name' && args[i + 1]) {
@@ -30,12 +34,18 @@ function parseArgs(): PipelineOptions {
     } else if (args[i] === '--delay' && args[i + 1]) {
       delay = parseInt(args[i + 1], 10);
       i++;
+    } else if (args[i] === '--skip' && args[i + 1]) {
+      skipUrls.push(args[i + 1]);
+      i++;
+    } else if (args[i] === '--url-pattern' && args[i + 1]) {
+      urlPattern = args[i + 1];
+      i++;
     } else if (!args[i].startsWith('--')) {
       startUrl = args[i];
     }
   }
 
-  return { startUrl, name, wait, delay };
+  return { startUrl, name, wait, delay, skipUrls, urlPattern };
 }
 
 function run(command: string, description: string) {
@@ -46,15 +56,17 @@ function run(command: string, description: string) {
 }
 
 async function main() {
-  const { startUrl, name, wait, delay } = parseArgs();
+  const { startUrl, name, wait, delay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {
     console.error('Usage: npm run all -- <start-url> [options]');
     console.error('Example: npm run all -- https://example.com/book --name "My Book"');
     console.error('Options:');
-    console.error('  --name "title"  Book title (default: "Book")');
-    console.error('  --wait ms       Page render wait time (default: 1000)');
-    console.error('  --delay ms      Delay between chapters (default: 1000)');
+    console.error('  --name "title"       Book title (default: "Book")');
+    console.error('  --wait ms            Page render wait time (default: 1000)');
+    console.error('  --delay ms           Delay between chapters (default: 1000)');
+    console.error('  --skip <url>         Skip specific URL (can be used multiple times)');
+    console.error('  --url-pattern <p>    Only include URLs matching glob pattern');
     process.exit(1);
   }
 
@@ -63,8 +75,15 @@ async function main() {
   console.log(`Book name: ${name}`);
 
   try {
-    // Step 1: Scrape
-    run(`npx tsx src/scrape.ts "${startUrl}" --wait ${wait} --delay ${delay}`, 'Scraping chapters');
+    // Step 1: Scrape - build command with optional filters
+    let scrapeCmd = `npx tsx src/scrape.ts "${startUrl}" --wait ${wait} --delay ${delay}`;
+    for (const skip of skipUrls) {
+      scrapeCmd += ` --skip "${skip}"`;
+    }
+    if (urlPattern) {
+      scrapeCmd += ` --url-pattern "${urlPattern}"`;
+    }
+    run(scrapeCmd, 'Scraping chapters');
 
     // Step 2: Merge
     run(`npx tsx src/merge.ts --name "${name}"`, 'Merging chapters');
