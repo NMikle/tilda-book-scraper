@@ -226,7 +226,22 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
       }
     }
 
-    return { title, html: contentParts.join('\n\n'), imageUrls };
+    // Deduplicate content blocks (Tilda often has duplicate elements for responsive design)
+    // Compare by text content since HTML structure may differ between duplicates
+    const seen = new Set<string>();
+    const uniqueParts = contentParts.filter(part => {
+      const trimmed = part.trim();
+      if (!trimmed) return false;
+      // Create a temporary element to extract text content for comparison
+      const temp = document.createElement('div');
+      temp.innerHTML = trimmed;
+      const textKey = temp.textContent?.trim() || '';
+      if (!textKey || seen.has(textKey)) return false;
+      seen.add(textKey);
+      return true;
+    });
+
+    return { title, html: uniqueParts.join('\n\n'), imageUrls };
   });
 }
 
