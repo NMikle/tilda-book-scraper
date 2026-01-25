@@ -92,6 +92,10 @@ output/
 - Relies on Tilda's DOM structure (`t-text`, `t-title`, `data-record-type`, etc.)
 - May need adjustments for sites with different Tilda templates
 
+## Roadmap
+
+See [TODO.md](TODO.md) for planned features and improvements.
+
 ## License
 
 MIT
