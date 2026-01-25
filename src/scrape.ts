@@ -262,10 +262,14 @@ async function extractChapterContent(page: Page): Promise<{ title: string; html:
     const uniqueParts = contentParts.filter(part => {
       const trimmed = part.trim();
       if (!trimmed) return false;
-      // Create a temporary element to extract text content for comparison
+      // Create a temporary element to extract content for comparison
       const temp = document.createElement('div');
       temp.innerHTML = trimmed;
-      const textKey = temp.textContent?.trim() || '';
+      // For images, use src as the key; for text content, use the text
+      const img = temp.querySelector('img');
+      const textKey = img
+        ? (img.getAttribute('src') || '')
+        : (temp.textContent?.trim() || '');
       if (!textKey || seen.has(textKey)) return false;
       seen.add(textKey);
       return true;
