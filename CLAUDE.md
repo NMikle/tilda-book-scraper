@@ -10,6 +10,7 @@ Scrape book content from Tilda-based websites, convert chapters to markdown with
 
 ```bash
 npm install                                        # Install dependencies
+npm test                                           # Run unit tests
 npm run scrape -- <url> [options]                  # Scrape chapters to output/chapters/*.md
 npm run merge [-- --name "title"]                  # Merge chapters into output/book.md
 npm run pdf                                        # Convert to output/book.pdf

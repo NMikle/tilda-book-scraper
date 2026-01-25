@@ -16,6 +16,7 @@ import TurndownService from 'turndown';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl } from './utils.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
@@ -33,20 +34,6 @@ interface ScraperOptions {
   chapterDelay: number;
   skipUrls: string[];
   urlPattern: string | null;
-}
-
-/**
- * Convert a simple glob pattern to a RegExp
- * Supports: * (any chars except /), ** (any chars including /)
- */
-function globToRegex(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape regex special chars (except * and ?)
-    .replace(/\*\*/g, '{{GLOBSTAR}}')       // Temp placeholder for **
-    .replace(/\*/g, '[^/]*')                // * matches anything except /
-    .replace(/\?/g, '[^/]')                 // ? matches single char except /
-    .replace(/\{\{GLOBSTAR\}\}/g, '.*');    // ** matches anything including /
-  return new RegExp(`^${escaped}$`);
 }
 
 function parseArgs(): ScraperOptions {
@@ -121,32 +108,6 @@ function progressBar(current: number, total: number, title: string): void {
   if (current === total) {
     process.stdout.write('\n');
   }
-}
-
-function sanitizeFilename(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-zа-яё0-9]+/gi, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 50);
-}
-
-function getBaseUrl(url: string): string {
-  const parsed = new URL(url);
-  return `${parsed.protocol}//${parsed.host}`;
-}
-
-function transformTildaImageUrl(url: string): string {
-  // Transform placeholder URLs to actual image URLs
-  // thb.tildacdn.com/tildXXXX/-/empty/image.png -> static.tildacdn.com/tildXXXX/image.png
-  if (url.includes('tildacdn.com') && url.includes('/-/empty/')) {
-    // Extract the tild hash and filename
-    const match = url.match(/\/(tild[^/]+)\/-\/empty\/(.+)$/);
-    if (match) {
-      return `https://static.tildacdn.com/${match[1]}/${match[2]}`;
-    }
-  }
-  return url;
 }
 
 async function downloadImage(url: string, index: number): Promise<string | null> {

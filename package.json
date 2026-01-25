@@ -14,6 +14,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "scrape": "tsx src/scrape.ts",
     "merge": "tsx src/merge.ts",
     "pdf": "tsx src/pdf.ts",
@@ -32,7 +34,8 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/turndown": "^5.0.5",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "md-to-pdf": "^5.2.4",
