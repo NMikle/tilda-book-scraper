@@ -38,19 +38,23 @@ npm run all -- <url> [options]
 - `--name "title"` - Book title for PDF cover (default: "Book")
 - `--wait ms` - Page render wait time in milliseconds (default: 1000)
 - `--delay ms` - Delay between chapters in milliseconds (default: 1000)
+- `--skip <url>` - Skip specific URL (can be used multiple times, scrape only)
+- `--url-pattern <glob>` - Only include URLs matching glob pattern (scrape only)
 
 **Examples:**
 
 ```bash
 npm run all -- https://example.com/book --name "My Book"
 npm run all -- https://example.com/book --name "My Book" --wait 2000 --delay 1500
+npm run all -- https://example.com/book --skip https://example.com/unrelated
+npm run all -- https://example.com/book --url-pattern "*/page*.html"
 ```
 
 ### Individual Steps
 
 ```bash
 # Step 1: Scrape chapters to markdown
-npm run scrape -- <url> [--wait ms] [--delay ms]
+npm run scrape -- <url> [options]
 
 # Step 2: Merge chapters into single document
 npm run merge [-- --name "Book Title"]

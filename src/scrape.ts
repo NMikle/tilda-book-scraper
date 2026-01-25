@@ -1,8 +1,14 @@
 /**
  * Scrape book chapters from Tilda-based websites
  *
- * Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]
+ * Usage: npm run scrape -- <start-url> [options]
  * Example: npm run scrape -- https://example.com/book --wait 1000 --delay 1000
+ *
+ * Options:
+ *   --wait ms           Page render wait time (default: 1000)
+ *   --delay ms          Delay between chapters (default: 1000)
+ *   --skip <url>        Skip specific URL (can be used multiple times)
+ *   --url-pattern <p>   Only include URLs matching glob pattern
  */
 
 import puppeteer, { type Page } from 'puppeteer';
@@ -25,6 +31,22 @@ interface ScraperOptions {
   startUrl: string;
   pageWait: number;
   chapterDelay: number;
+  skipUrls: string[];
+  urlPattern: string | null;
+}
+
+/**
+ * Convert a simple glob pattern to a RegExp
+ * Supports: * (any chars except /), ** (any chars including /)
+ */
+function globToRegex(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape regex special chars (except * and ?)
+    .replace(/\*\*/g, '{{GLOBSTAR}}')       // Temp placeholder for **
+    .replace(/\*/g, '[^/]*')                // * matches anything except /
+    .replace(/\?/g, '[^/]')                 // ? matches single char except /
+    .replace(/\{\{GLOBSTAR\}\}/g, '.*');    // ** matches anything including /
+  return new RegExp(`^${escaped}$`);
 }
 
 function parseArgs(): ScraperOptions {
@@ -32,6 +54,8 @@ function parseArgs(): ScraperOptions {
   let startUrl = '';
   let pageWait = DEFAULT_PAGE_WAIT;
   let chapterDelay = DEFAULT_CHAPTER_DELAY;
+  const skipUrls: string[] = [];
+  let urlPattern: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--wait' && args[i + 1]) {
@@ -40,12 +64,18 @@ function parseArgs(): ScraperOptions {
     } else if (args[i] === '--delay' && args[i + 1]) {
       chapterDelay = parseInt(args[i + 1], 10);
       i++;
+    } else if (args[i] === '--skip' && args[i + 1]) {
+      skipUrls.push(args[i + 1]);
+      i++;
+    } else if (args[i] === '--url-pattern' && args[i + 1]) {
+      urlPattern = args[i + 1];
+      i++;
     } else if (!args[i].startsWith('--')) {
       startUrl = args[i];
     }
   }
 
-  return { startUrl, pageWait, chapterDelay };
+  return { startUrl, pageWait, chapterDelay, skipUrls, urlPattern };
 }
 
 const turndown = new TurndownService({
@@ -378,14 +408,16 @@ async function scrapeChapter(
 }
 
 async function main() {
-  const { startUrl, pageWait, chapterDelay } = parseArgs();
+  const { startUrl, pageWait, chapterDelay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {
-    console.error('Usage: npm run scrape -- <start-url> [--wait ms] [--delay ms]');
+    console.error('Usage: npm run scrape -- <start-url> [options]');
     console.error('Example: npm run scrape -- https://example.com/book');
     console.error('Options:');
-    console.error('  --wait ms    Page render wait time (default: 1000)');
-    console.error('  --delay ms   Delay between chapters (default: 1000)');
+    console.error('  --wait ms           Page render wait time (default: 1000)');
+    console.error('  --delay ms          Delay between chapters (default: 1000)');
+    console.error('  --skip <url>        Skip specific URL (can be used multiple times)');
+    console.error('  --url-pattern <p>   Only include URLs matching glob pattern');
     process.exit(1);
   }
 
@@ -423,7 +455,25 @@ async function main() {
     await delay(pageWait);
 
     // Check if this is a TOC page (has multiple chapter links) or a chapter page
-    const links = await extractTocLinks(page, baseUrl);
+    let links = await extractTocLinks(page, baseUrl);
+
+    // Filter links based on --skip and --url-pattern options
+    if (skipUrls.length > 0 || urlPattern) {
+      const originalCount = links.length;
+
+      if (skipUrls.length > 0) {
+        links = links.filter(link => !skipUrls.some(skip => link.includes(skip)));
+      }
+
+      if (urlPattern) {
+        const regex = globToRegex(urlPattern);
+        links = links.filter(link => regex.test(link));
+      }
+
+      if (links.length !== originalCount) {
+        console.log(`Filtered ${originalCount - links.length} URLs (${originalCount} → ${links.length})`);
+      }
+    }
 
     if (links.length > 20) {
       // This looks like a TOC page - scrape all linked chapters

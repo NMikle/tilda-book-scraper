@@ -20,12 +20,16 @@ npm run all -- <url> [options]                     # Run full pipeline
 - `--name "title"` - Book title for PDF cover (default: "Book")
 - `--wait ms` - Page render wait time in milliseconds (default: 1000)
 - `--delay ms` - Delay between chapters in milliseconds (default: 1000)
+- `--skip <url>` - Skip specific URL, can be used multiple times (scrape only)
+- `--url-pattern <glob>` - Only include URLs matching glob pattern (scrape only)
 
 **Examples:**
 ```bash
 npm run all -- https://example.com/book --name "My Book"
 npm run all -- https://example.com/another-book --name "Another Book" --wait 2000 --delay 1500
 npm run scrape -- https://example.com/book --wait 500 --delay 500
+npm run scrape -- https://example.com/book --skip https://example.com/unrelated-page
+npm run scrape -- https://example.com/book --url-pattern "*/page*.html"
 npm run merge -- --name "My Book Title"
 ```
 
