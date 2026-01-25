@@ -194,9 +194,11 @@ describe('main', () => {
   let mockConsoleError: ReturnType<typeof vi.spyOn>;
   let mockPage: any;
   let mockBrowser: any;
+  let originalArgv: string[];
 
   beforeEach(() => {
     vi.clearAllMocks();
+    originalArgv = process.argv;
     mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
     mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -221,14 +223,13 @@ describe('main', () => {
   });
 
   afterEach(() => {
+    process.argv = originalArgv;
     mockExit.mockRestore();
     mockConsoleLog.mockRestore();
     mockConsoleError.mockRestore();
   });
 
   it('exits with error when no start URL provided', async () => {
-    // Mock parseArgs to return empty startUrl
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts'];
 
     // Make process.exit throw to stop execution
@@ -242,12 +243,9 @@ describe('main', () => {
       expect.stringContaining('Usage:')
     );
     expect(mockExit).toHaveBeenCalledWith(1);
-
-    process.argv = originalArgv;
   });
 
   it('creates output directories', async () => {
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
     // Mock page.evaluate for extractTocLinks to return empty array (navigation mode)
@@ -261,12 +259,9 @@ describe('main', () => {
 
     expect(fs.mkdir).toHaveBeenCalledWith('output/chapters', { recursive: true });
     expect(fs.mkdir).toHaveBeenCalledWith('output/images', { recursive: true });
-
-    process.argv = originalArgv;
   });
 
   it('launches browser with correct options', async () => {
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
     mockPage.evaluate
@@ -281,12 +276,9 @@ describe('main', () => {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
-
-    process.argv = originalArgv;
   });
 
   it('writes metadata file after scraping', async () => {
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
     mockPage.evaluate
@@ -302,12 +294,9 @@ describe('main', () => {
       expect.stringContaining('"startUrl"'),
       'utf-8'
     );
-
-    process.argv = originalArgv;
   });
 
   it('closes browser after completion', async () => {
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
     mockPage.evaluate
@@ -319,12 +308,9 @@ describe('main', () => {
     await main();
 
     expect(mockBrowser.close).toHaveBeenCalled();
-
-    process.argv = originalArgv;
   });
 
   it('closes browser even on error', async () => {
-    const originalArgv = process.argv;
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
     mockPage.goto.mockRejectedValueOnce(new Error('Network error'));
@@ -334,7 +320,5 @@ describe('main', () => {
 
     expect(mockBrowser.close).toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(1);
-
-    process.argv = originalArgv;
   });
 });
