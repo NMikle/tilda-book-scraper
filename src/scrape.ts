@@ -89,11 +89,19 @@ interface BookMeta {
   chapters: ChapterMeta[];
 }
 
-function delay(ms: number): Promise<void> {
+/**
+ * Wait for specified milliseconds
+ * Exported for testing
+ */
+export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function progressBar(current: number, total: number, title: string): void {
+/**
+ * Display progress bar in terminal
+ * Exported for testing
+ */
+export function progressBar(current: number, total: number, title: string): void {
   const barWidth = 30;
   const percent = Math.round((current / total) * 100);
   const filled = Math.round((current / total) * barWidth);
@@ -375,7 +383,7 @@ async function scrapeChapter(
   return { index, title, url, filename };
 }
 
-async function main() {
+export async function main() {
   const { startUrl, pageWait, chapterDelay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {

@@ -16,7 +16,7 @@ const INPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.pdf');
 const STYLES_FILE = path.join(__dirname, 'styles.css');
 
-async function main() {
+export async function main() {
   // Check if book.md exists
   try {
     await fs.access(INPUT_FILE);
@@ -55,7 +55,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('Error:', error);
-  process.exit(1);
-});
+// Only run main when executed directly (not when imported for testing)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error('Error:', error);
+    process.exit(1);
+  });
+}

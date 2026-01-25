@@ -6,7 +6,7 @@
 
 import { execSync } from 'child_process';
 
-interface PipelineOptions {
+export interface PipelineOptions {
   startUrl: string;
   name: string;
   wait: number;
@@ -15,8 +15,11 @@ interface PipelineOptions {
   urlPattern: string | null;
 }
 
-function parseArgs(): PipelineOptions {
-  const args = process.argv.slice(2);
+/**
+ * Parse command line arguments from an array
+ * Exported for testing
+ */
+export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptions {
   let startUrl = '';
   let name = 'Book';
   let wait = 1000;
@@ -48,14 +51,18 @@ function parseArgs(): PipelineOptions {
   return { startUrl, name, wait, delay, skipUrls, urlPattern };
 }
 
-function run(command: string, description: string) {
+/**
+ * Run a shell command with description header
+ * Exported for testing
+ */
+export function run(command: string, description: string) {
   console.log(`\n${'='.repeat(50)}`);
   console.log(`Step: ${description}`);
   console.log('='.repeat(50));
   execSync(command, { stdio: 'inherit' });
 }
 
-async function main() {
+export async function main() {
   const { startUrl, name, wait, delay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {
@@ -105,4 +112,7 @@ async function main() {
   }
 }
 
-main();
+// Only run main when executed directly (not when imported for testing)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

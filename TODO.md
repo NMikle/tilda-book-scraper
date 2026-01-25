@@ -4,18 +4,15 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Increase test coverage to 90%+** - Current coverage is limited to utility functions; add tests for merge.ts, argument parsing, etc.
+- [ ] **Increase test coverage to 90%+** - Overall: 64%
 
-### merge.ts Coverage Plan (94% achieved)
-
-1. [x] Export testable pure functions (parseArgs, fixImagePaths, generateTocEntry)
-2. [x] Mock fs/promises module in tests
-3. [x] Test main() success path: reads meta.json, reads chapters, writes book.md
-4. [x] Test main() error: meta.json not found
-5. [x] Test main() error: no chapters in metadata
-6. [x] Test main() warning: missing chapter file (skipped gracefully)
-7. [x] Verify TOC generation uses correct anchors
-8. [x] Verify image paths are fixed in output
+| File | Coverage | Status |
+|------|----------|--------|
+| index.ts | 98% | :green_circle: |
+| utils.ts | 97% | :green_circle: |
+| merge.ts | 94% | :green_circle: |
+| pdf.ts | 85% | :yellow_circle: |
+| scrape.ts | 42% | :red_circle: (browser-context code limits this) |
 
 ## Medium Priority
 
