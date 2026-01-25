@@ -28,17 +28,25 @@ const DEFAULT_CHAPTER_DELAY = 1000; // Delay between chapters (+ random 0-500ms)
 
 let imageCounter = 0;
 
+/** Configuration options for the scraper */
 export interface ScraperOptions {
+  /** Starting URL to scrape */
   startUrl: string;
+  /** Wait time after page load for JS rendering (ms) */
   pageWait: number;
+  /** Delay between scraping chapters (ms) */
   chapterDelay: number;
+  /** URLs to skip during scraping */
   skipUrls: string[];
+  /** Glob pattern to filter URLs */
   urlPattern: string | null;
 }
 
 /**
- * Parse command line arguments from an array
- * Exported for testing
+ * Parse command line arguments for the scrape command.
+ *
+ * @param args - Command line arguments (defaults to process.argv)
+ * @returns Parsed scraper options
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOptions {
   let startUrl = '';
@@ -90,16 +98,22 @@ interface BookMeta {
 }
 
 /**
- * Wait for specified milliseconds
- * Exported for testing
+ * Wait for specified milliseconds.
+ *
+ * @param ms - Duration to wait in milliseconds
+ * @returns Promise that resolves after the delay
  */
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Display progress bar in terminal
- * Exported for testing
+ * Display a progress bar in the terminal.
+ * Shows percentage, counts, and current item title.
+ *
+ * @param current - Current item number (1-based)
+ * @param total - Total number of items
+ * @param title - Title of the current item being processed
  */
 export function progressBar(current: number, total: number, title: string): void {
   const barWidth = 30;
@@ -383,7 +397,14 @@ async function scrapeChapter(
   return { index, title, url, filename };
 }
 
-export async function main() {
+/**
+ * Main entry point for the scraper.
+ * Launches browser, navigates to start URL, and scrapes all chapters.
+ * Supports both TOC mode (many links) and navigation mode (follow next links).
+ *
+ * @throws Exits with code 1 if no URL provided or scraping fails
+ */
+export async function main(): Promise<void> {
   const { startUrl, pageWait, chapterDelay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {

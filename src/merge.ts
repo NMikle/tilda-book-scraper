@@ -13,22 +13,33 @@ const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
 const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 
+/** Metadata for a single chapter */
 export interface ChapterMeta {
+  /** Zero-based index of the chapter */
   index: number;
+  /** Chapter title extracted from the page */
   title: string;
+  /** Original URL of the chapter */
   url: string;
+  /** Local filename (e.g., '001-introduction.md') */
   filename: string;
 }
 
+/** Metadata for the entire book, stored in meta.json */
 export interface BookMeta {
+  /** ISO timestamp when scraping was performed */
   scrapedAt: string;
+  /** Starting URL for the scrape */
   startUrl: string;
+  /** Array of chapter metadata in order */
   chapters: ChapterMeta[];
 }
 
 /**
- * Parse command line arguments from an array
- * Exported for testing
+ * Parse command line arguments for the merge command.
+ *
+ * @param args - Command line arguments (defaults to process.argv)
+ * @returns Parsed options with book name
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): { name: string } {
   let name = 'Book';
@@ -44,24 +55,36 @@ export function parseArgs(args: string[] = process.argv.slice(2)): { name: strin
 }
 
 /**
- * Fix image paths in chapter content
- * Chapters use ../images/, but book.md is in output/ so use ./images/
- * Exported for testing
+ * Fix image paths in chapter content for the merged document.
+ * Converts relative paths from chapter perspective (../images/)
+ * to merged document perspective (./images/).
+ *
+ * @param content - Markdown content with image references
+ * @returns Content with corrected image paths
  */
 export function fixImagePaths(content: string): string {
   return content.replace(/\.\.\/(images\/)/g, './$1');
 }
 
 /**
- * Generate a table of contents entry for a chapter
- * Exported for testing
+ * Generate a table of contents entry for a chapter.
+ * Creates a numbered markdown link with proper anchor.
+ *
+ * @param chapter - Chapter metadata
+ * @returns Formatted TOC entry (e.g., '1. [Introduction](#introduction)')
  */
 export function generateTocEntry(chapter: ChapterMeta): string {
   const anchor = generateAnchor(chapter.title);
   return `${chapter.index + 1}. [${chapter.title}](#${anchor})`;
 }
 
-export async function main() {
+/**
+ * Main entry point for the merge command.
+ * Reads chapter files and metadata, then creates a merged book.md with TOC.
+ *
+ * @throws Exits with code 1 if meta.json is missing or has no chapters
+ */
+export async function main(): Promise<void> {
   const { name } = parseArgs();
 
   // Check if meta.json exists

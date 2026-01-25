@@ -4,8 +4,15 @@
  */
 
 /**
- * Convert a simple glob pattern to a RegExp
+ * Convert a simple glob pattern to a RegExp.
  * Supports: * (any chars except /), ** (any chars including /), ? (single char)
+ *
+ * @param pattern - Glob pattern to convert
+ * @returns RegExp that matches the pattern
+ *
+ * @example
+ * globToRegex('*.html').test('page.html') // true
+ * globToRegex('**\/page*.html').test('https://example.com/page1.html') // true
  */
 export function globToRegex(pattern: string): RegExp {
   const escaped = pattern
@@ -18,8 +25,15 @@ export function globToRegex(pattern: string): RegExp {
 }
 
 /**
- * Transform Tilda placeholder image URLs to actual image URLs
- * thb.tildacdn.com/tildXXXX/-/empty/image.png -> static.tildacdn.com/tildXXXX/image.png
+ * Transform Tilda placeholder image URLs to actual image URLs.
+ * Converts thb.tildacdn.com placeholder URLs to static.tildacdn.com actual image URLs.
+ *
+ * @param url - Image URL to transform
+ * @returns Transformed URL pointing to actual image, or original URL if not a placeholder
+ *
+ * @example
+ * transformTildaImageUrl('https://thb.tildacdn.com/tild1234/-/empty/photo.jpg')
+ * // Returns: 'https://static.tildacdn.com/tild1234/photo.jpg'
  */
 export function transformTildaImageUrl(url: string): string {
   if (url.includes('tildacdn.com') && url.includes('/-/empty/')) {
@@ -32,7 +46,16 @@ export function transformTildaImageUrl(url: string): string {
 }
 
 /**
- * Create a safe filename from a title
+ * Create a safe filename from a title.
+ * Converts to lowercase, replaces special characters with dashes,
+ * and truncates to 50 characters.
+ *
+ * @param title - Title to convert to filename
+ * @returns Sanitized filename safe for filesystem use
+ *
+ * @example
+ * sanitizeFilename('Chapter 1: Introduction') // 'chapter-1-introduction'
+ * sanitizeFilename('Привет Мир') // 'привет-мир'
  */
 export function sanitizeFilename(title: string): string {
   return title
@@ -43,7 +66,15 @@ export function sanitizeFilename(title: string): string {
 }
 
 /**
- * Extract the base URL (protocol + host) from a full URL
+ * Extract the base URL (protocol + host) from a full URL.
+ *
+ * @param url - Full URL to extract base from
+ * @returns Base URL containing protocol and host
+ * @throws {TypeError} If URL is invalid
+ *
+ * @example
+ * getBaseUrl('https://example.com/path/to/page') // 'https://example.com'
+ * getBaseUrl('http://localhost:3000/page') // 'http://localhost:3000'
  */
 export function getBaseUrl(url: string): string {
   const parsed = new URL(url);
@@ -51,8 +82,16 @@ export function getBaseUrl(url: string): string {
 }
 
 /**
- * Generate a markdown anchor from a heading title
- * Matches the anchor generation used by most markdown processors (GitHub/CommonMark style)
+ * Generate a markdown anchor from a heading title.
+ * Matches the anchor generation used by GitHub/CommonMark style processors.
+ *
+ * @param title - Heading title to convert to anchor
+ * @returns Anchor ID suitable for markdown links
+ *
+ * @example
+ * generateAnchor('Hello World') // 'hello-world'
+ * generateAnchor('Chapter 1: Introduction') // 'chapter-1-introduction'
+ * generateAnchor('Скелетные мышцы') // 'скелетные-мышцы'
  */
 export function generateAnchor(title: string): string {
   return title
@@ -63,11 +102,16 @@ export function generateAnchor(title: string): string {
 }
 
 /**
- * Deduplicate content parts by comparing text content (or image src for images)
- * This is used to remove duplicate blocks that Tilda creates for responsive design
+ * Deduplicate content parts by comparing text content (or image src for images).
+ * Removes duplicate blocks that Tilda creates for responsive design.
  *
- * Note: This function is designed to work in browser context (page.evaluate)
- * but is also exported for testing with jsdom
+ * @param contentParts - Array of HTML content strings to deduplicate
+ * @returns Deduplicated array with first occurrence of each unique content preserved
+ *
+ * @remarks
+ * This function works in both browser context (page.evaluate) and Node.js (testing).
+ * For images, deduplication is based on src attribute.
+ * For text content, deduplication is based on extracted text.
  */
 export function deduplicateContentParts(contentParts: string[]): string[] {
   const seen = new Set<string>();

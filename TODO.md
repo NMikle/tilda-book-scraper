@@ -14,6 +14,18 @@ Project roadmap and planned improvements.
 | pdf.ts | 85% | :yellow_circle: |
 | scrape.ts | 42% | :red_circle: (browser-context code limits this) |
 
+- [ ] **Code quality improvements** - Ensure all code follows best practices
+
+| Task | Status |
+|------|--------|
+| Add JSDoc to all exported functions in utils.ts | :green_circle: |
+| Add JSDoc to all exported functions in merge.ts | :green_circle: |
+| Add JSDoc to all exported functions in scrape.ts | :green_circle: |
+| Add JSDoc to all exported functions in pdf.ts | :green_circle: |
+| Add JSDoc to all exported functions in index.ts | :green_circle: |
+| Review and improve function/variable naming | :red_circle: |
+| Add inline comments for complex logic | :red_circle: |
+
 ## Medium Priority
 - [ ] **Add cover page support** - Option to include a cover image and styled title page in the PDF
 - [ ] **Improve chapter detection** - Better heuristics for distinguishing TOC pages from chapter pages (not just link count)

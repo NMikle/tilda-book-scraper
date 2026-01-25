@@ -7,8 +7,10 @@
 import { execSync } from 'child_process';
 
 /**
- * Format duration in milliseconds to human-readable string
- * Exported for testing
+ * Format duration in milliseconds to human-readable string.
+ *
+ * @param ms - Duration in milliseconds
+ * @returns Formatted string (e.g., '1m 30s' or '45s')
  */
 export function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -21,23 +23,35 @@ export function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
+/** Timing information for a single pipeline step */
 export interface StepTiming {
+  /** Description of the step */
   step: string;
+  /** Duration in milliseconds */
   duration: number;
 }
 
+/** Configuration options for the full pipeline */
 export interface PipelineOptions {
+  /** Starting URL to scrape */
   startUrl: string;
+  /** Book title for the PDF */
   name: string;
+  /** Page render wait time in ms */
   wait: number;
+  /** Delay between chapters in ms */
   delay: number;
+  /** URLs to skip during scraping */
   skipUrls: string[];
+  /** Glob pattern to filter URLs */
   urlPattern: string | null;
 }
 
 /**
- * Parse command line arguments from an array
- * Exported for testing
+ * Parse command line arguments for the pipeline command.
+ *
+ * @param args - Command line arguments (defaults to process.argv)
+ * @returns Parsed pipeline options
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptions {
   let startUrl = '';
@@ -72,8 +86,13 @@ export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptio
 }
 
 /**
- * Run a shell command with description header and timing
- * Exported for testing
+ * Run a shell command with description header and timing.
+ * Displays progress and completion time to stdout.
+ *
+ * @param command - Shell command to execute
+ * @param description - Human-readable description of the step
+ * @returns Timing information for the step
+ * @throws Re-throws any error from execSync
  */
 export function run(command: string, description: string): StepTiming {
   console.log(`\n${'='.repeat(50)}`);
@@ -89,7 +108,13 @@ export function run(command: string, description: string): StepTiming {
   return { step: description, duration };
 }
 
-export async function main() {
+/**
+ * Main entry point for the full pipeline.
+ * Runs scrape → merge → pdf steps in sequence with timing.
+ *
+ * @throws Exits with code 1 if no URL provided or any step fails
+ */
+export async function main(): Promise<void> {
   const { startUrl, name, wait, delay, skipUrls, urlPattern } = parseArgs();
 
   if (!startUrl) {

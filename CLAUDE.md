@@ -91,3 +91,26 @@ The scraper automatically transforms these URLs. Images are converted to JPEG wi
 - **Strive for maximum coverage** - All new code should have corresponding tests; target full coverage
 - **Use mocks for external dependencies** - Never test actual puppeteer, fs, or network calls; mock them instead
 - **Never break existing functionality** - If tests fail, fix the issue before committing
+
+## Code Style
+
+### Documentation
+- **All functions must have JSDoc comments** - Describe what the function does, its parameters, and return value
+- **Export functions should always be documented** - Public API must be clear and well-documented
+- **Complex logic needs inline comments** - Explain "why", not "what"
+
+### Naming
+- **Use descriptive names** - Variables and functions should be self-explanatory
+- **Boolean variables start with is/has/should** - e.g., `isComplete`, `hasError`, `shouldRetry`
+- **Functions start with verbs** - e.g., `parseArgs`, `downloadImage`, `generateAnchor`
+
+### Structure
+- **Keep functions small and focused** - Each function should do one thing well
+- **Extract reusable logic to utils.ts** - Shared utilities should be centralized and tested
+- **Group related code together** - Organize by feature/responsibility
+- **Prefer early returns** - Reduce nesting by handling edge cases first
+
+### TypeScript
+- **Use explicit types for function signatures** - Parameters and return types should be typed
+- **Export interfaces for shared types** - Make types reusable across modules
+- **Avoid `any` type** - Use proper types or `unknown` if type is truly unknown

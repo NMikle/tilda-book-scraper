@@ -16,7 +16,13 @@ const INPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.pdf');
 const STYLES_FILE = path.join(__dirname, 'styles.css');
 
-export async function main() {
+/**
+ * Main entry point for PDF generation.
+ * Converts book.md to book.pdf using md-to-pdf with custom styling.
+ *
+ * @throws Exits with code 1 if book.md is missing or PDF generation fails
+ */
+export async function main(): Promise<void> {
   // Check if book.md exists
   try {
     await fs.access(INPUT_FILE);
