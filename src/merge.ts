@@ -61,7 +61,7 @@ export function generateTocEntry(chapter: ChapterMeta): string {
   return `${chapter.index + 1}. [${chapter.title}](#${anchor})`;
 }
 
-async function main() {
+export async function main() {
   const { name } = parseArgs();
 
   // Check if meta.json exists

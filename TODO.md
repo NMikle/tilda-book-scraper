@@ -6,6 +6,17 @@ Project roadmap and planned improvements.
 
 - [ ] **Increase test coverage to 90%+** - Current coverage is limited to utility functions; add tests for merge.ts, argument parsing, etc.
 
+### merge.ts Coverage Plan (94% achieved)
+
+1. [x] Export testable pure functions (parseArgs, fixImagePaths, generateTocEntry)
+2. [x] Mock fs/promises module in tests
+3. [x] Test main() success path: reads meta.json, reads chapters, writes book.md
+4. [x] Test main() error: meta.json not found
+5. [x] Test main() error: no chapters in metadata
+6. [x] Test main() warning: missing chapter file (skipped gracefully)
+7. [x] Verify TOC generation uses correct anchors
+8. [x] Verify image paths are fixed in output
+
 ## Medium Priority
 
 - [ ] **Add elapsed time display** - Show timing for each pipeline step (scrape, merge, pdf) and total elapsed time in a summary table

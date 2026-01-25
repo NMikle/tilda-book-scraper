@@ -1,5 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseArgs, fixImagePaths, generateTocEntry, ChapterMeta } from './merge.js';
+
+// Mock fs/promises
+vi.mock('fs/promises', () => ({
+  access: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
+  stat: vi.fn(),
+}));
+
+// Import mocked fs after vi.mock
+import * as fs from 'fs/promises';
 
 describe('parseArgs', () => {
   it('returns default name when no args provided', () => {
@@ -103,5 +114,141 @@ describe('generateTocEntry', () => {
       filename: '034-mito.md',
     };
     expect(generateTocEntry(chapter)).toBe('34. [Митохондрии - строение](#митохондрии---строение)');
+  });
+});
+
+describe('main', () => {
+  const mockMeta = {
+    scrapedAt: '2024-01-15T10:00:00.000Z',
+    startUrl: 'https://example.com/book',
+    chapters: [
+      { index: 0, title: 'Chapter 1', url: 'https://example.com/ch1', filename: '001-chapter-1.md' },
+      { index: 1, title: 'Chapter 2', url: 'https://example.com/ch2', filename: '002-chapter-2.md' },
+    ],
+  };
+
+  const mockChapter1 = '# Chapter 1\n\nContent with ![img](../images/photo.jpg)';
+  const mockChapter2 = '# Chapter 2\n\nMore content';
+
+  let mockExit: ReturnType<typeof vi.spyOn>;
+  let mockConsoleLog: ReturnType<typeof vi.spyOn>;
+  let mockConsoleError: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+    mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    mockExit.mockRestore();
+    mockConsoleLog.mockRestore();
+    mockConsoleError.mockRestore();
+  });
+
+  it('merges chapters successfully', async () => {
+    const { main } = await import('./merge.js');
+
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockImplementation(async (path) => {
+      if (String(path).includes('meta.json')) return JSON.stringify(mockMeta);
+      if (String(path).includes('001-chapter-1.md')) return mockChapter1;
+      if (String(path).includes('002-chapter-2.md')) return mockChapter2;
+      throw new Error('File not found');
+    });
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as any);
+
+    await main();
+
+    expect(fs.access).toHaveBeenCalledWith('output/meta.json');
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      'output/book.md',
+      expect.stringContaining('# Book'),
+      'utf-8'
+    );
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      'output/book.md',
+      expect.stringContaining('## Table of Contents'),
+      'utf-8'
+    );
+    // Verify image paths were fixed
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      'output/book.md',
+      expect.stringContaining('./images/photo.jpg'),
+      'utf-8'
+    );
+    expect(mockConsoleLog).toHaveBeenCalledWith('Merging 2 chapters...');
+  });
+
+  it('exits with error when meta.json not found', async () => {
+    const { main } = await import('./merge.js');
+
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+
+    await main();
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('not found')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('exits with error when no chapters in metadata', async () => {
+    const { main } = await import('./merge.js');
+
+    const emptyMeta = { ...mockMeta, chapters: [] };
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(emptyMeta));
+
+    await main();
+
+    expect(mockConsoleError).toHaveBeenCalledWith('Error: No chapters found in metadata.');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('skips missing chapter files with warning', async () => {
+    const { main } = await import('./merge.js');
+
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockImplementation(async (path) => {
+      if (String(path).includes('meta.json')) return JSON.stringify(mockMeta);
+      if (String(path).includes('001-chapter-1.md')) return mockChapter1;
+      // Chapter 2 is missing
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 512 } as any);
+
+    await main();
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Warning: Could not read 002-chapter-2.md')
+    );
+    // Should still write output with available chapters
+    expect(fs.writeFile).toHaveBeenCalled();
+  });
+
+  it('generates correct TOC with anchors', async () => {
+    const { main } = await import('./merge.js');
+
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockImplementation(async (path) => {
+      if (String(path).includes('meta.json')) return JSON.stringify(mockMeta);
+      if (String(path).includes('001-chapter-1.md')) return mockChapter1;
+      if (String(path).includes('002-chapter-2.md')) return mockChapter2;
+      throw new Error('File not found');
+    });
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as any);
+
+    await main();
+
+    const writeCall = vi.mocked(fs.writeFile).mock.calls[0];
+    const content = writeCall[1] as string;
+
+    expect(content).toContain('1. [Chapter 1](#chapter-1)');
+    expect(content).toContain('2. [Chapter 2](#chapter-2)');
   });
 });
