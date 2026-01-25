@@ -321,4 +321,64 @@ describe('main', () => {
     expect(mockBrowser.close).toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(1);
   });
+
+  it('handles empty page content gracefully', async () => {
+    process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
+
+    mockPage.evaluate
+      .mockResolvedValueOnce([]) // extractTocLinks - no TOC links
+      .mockResolvedValueOnce({ title: 'Empty Chapter', html: '', imageUrls: [] }) // empty content
+      .mockResolvedValueOnce(null); // no next link
+
+    const { main } = await import('./scrape.js');
+    await main();
+
+    // Should still write the chapter file even with empty content
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      expect.stringMatching(/output\/chapters\/001-empty-chapter\.md$/),
+      expect.stringContaining('# Empty Chapter'),
+      'utf-8'
+    );
+  });
+
+  it('handles unicode in chapter titles', async () => {
+    process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
+
+    mockPage.evaluate
+      .mockResolvedValueOnce([]) // extractTocLinks
+      .mockResolvedValueOnce({ title: 'Глава 1: Введение', html: '<p>Содержимое</p>', imageUrls: [] })
+      .mockResolvedValueOnce(null);
+
+    const { main } = await import('./scrape.js');
+    await main();
+
+    // Verify unicode filename is created correctly
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      expect.stringMatching(/output\/chapters\/001-глава-1-введение\.md$/),
+      expect.any(String),
+      'utf-8'
+    );
+  });
+
+  it('truncates extremely long titles in filenames', async () => {
+    process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
+
+    const longTitle = 'This is an extremely long chapter title that definitely exceeds the fifty character limit for filenames';
+    mockPage.evaluate
+      .mockResolvedValueOnce([]) // extractTocLinks
+      .mockResolvedValueOnce({ title: longTitle, html: '<p>Content</p>', imageUrls: [] })
+      .mockResolvedValueOnce(null);
+
+    const { main } = await import('./scrape.js');
+    await main();
+
+    // Filename should be truncated (001- prefix + max 50 chars + .md)
+    const writeCall = vi.mocked(fs.writeFile).mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('chapters')
+    );
+    expect(writeCall).toBeDefined();
+    const filename = (writeCall![0] as string).split('/').pop()!;
+    // 001- (4) + sanitized title (max 50) + .md (3) = max 57 chars
+    expect(filename.length).toBeLessThanOrEqual(57);
+  });
 });
