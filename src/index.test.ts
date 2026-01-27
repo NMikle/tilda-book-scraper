@@ -44,6 +44,7 @@ describe('parseArgs', () => {
       delay: 1000,
       skipUrls: [],
       urlPattern: null,
+      showHelp: false,
     });
   });
 
@@ -102,7 +103,18 @@ describe('parseArgs', () => {
       delay: 750,
       skipUrls: ['exclude'],
       urlPattern: '**/*.html',
+      showHelp: false,
     });
+  });
+
+  it('parses --help flag', () => {
+    const result = parseArgs(['--help']);
+    expect(result.showHelp).toBe(true);
+  });
+
+  it('parses -h flag', () => {
+    const result = parseArgs(['-h']);
+    expect(result.showHelp).toBe(true);
   });
 });
 
@@ -176,7 +188,7 @@ describe('main', () => {
 
     await expect(main()).rejects.toThrow('process.exit called');
 
-    expect(mockConsoleError).toHaveBeenCalledWith(
+    expect(mockConsoleLog).toHaveBeenCalledWith(
       expect.stringContaining('Usage:')
     );
     expect(mockExit).toHaveBeenCalledWith(1);

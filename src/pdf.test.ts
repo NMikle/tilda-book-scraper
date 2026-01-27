@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { parseArgs } from './pdf.js';
 
 // Mock all external dependencies
 vi.mock('fs/promises', () => ({
@@ -13,6 +14,24 @@ vi.mock('md-to-pdf', () => ({
 // Import mocked modules
 import * as fs from 'fs/promises';
 import { mdToPdf } from 'md-to-pdf';
+
+describe('parseArgs', () => {
+  it('returns showHelp false when no args provided', () => {
+    expect(parseArgs([])).toEqual({ showHelp: false });
+  });
+
+  it('parses --help flag', () => {
+    expect(parseArgs(['--help'])).toEqual({ showHelp: true });
+  });
+
+  it('parses -h flag', () => {
+    expect(parseArgs(['-h'])).toEqual({ showHelp: true });
+  });
+
+  it('ignores unknown flags', () => {
+    expect(parseArgs(['--unknown', 'value'])).toEqual({ showHelp: false });
+  });
+});
 
 describe('main', () => {
   let mockExit: ReturnType<typeof vi.spyOn>;

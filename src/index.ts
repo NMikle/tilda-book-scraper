@@ -46,6 +46,28 @@ export interface PipelineOptions {
   skipUrls: string[];
   /** Glob pattern to filter URLs */
   urlPattern: string | null;
+  /** Whether to show help and exit */
+  showHelp: boolean;
+}
+
+/**
+ * Print usage information for the pipeline command.
+ */
+function showUsage(): void {
+  console.log('Usage: npm run all -- <start-url> [options]');
+  console.log('');
+  console.log('Run the full pipeline: scrape → merge → pdf');
+  console.log('');
+  console.log('Options:');
+  console.log('  --name <title>       Book title for the PDF (default: "Book")');
+  console.log('  --wait <ms>          Page render wait time (default: 1000)');
+  console.log('  --delay <ms>         Delay between chapters (default: 1000)');
+  console.log('  --skip <url>         Skip specific URL (can be used multiple times)');
+  console.log('  --url-pattern <p>    Only include URLs matching glob pattern');
+  console.log('  --help, -h           Show this help message');
+  console.log('');
+  console.log('Example:');
+  console.log('  npm run all -- https://example.com/book --name "My Book"');
 }
 
 /**
@@ -61,9 +83,12 @@ export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptio
   let delay = 1000;
   const skipUrls: string[] = [];
   let urlPattern: string | null = null;
+  let showHelp = false;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--name' && args[i + 1]) {
+    if (args[i] === '--help' || args[i] === '-h') {
+      showHelp = true;
+    } else if (args[i] === '--name' && args[i + 1]) {
       name = args[i + 1];
       i++;
     } else if (args[i] === '--wait' && args[i + 1]) {
@@ -83,7 +108,7 @@ export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptio
     }
   }
 
-  return { startUrl, name, wait, delay, skipUrls, urlPattern };
+  return { startUrl, name, wait, delay, skipUrls, urlPattern, showHelp };
 }
 
 /**
@@ -116,17 +141,15 @@ export function run(command: string, description: string): StepTiming {
  * @throws Exits with code 1 if no URL provided or any step fails
  */
 export async function main(): Promise<void> {
-  const { startUrl, name, wait, delay, skipUrls, urlPattern } = parseArgs();
+  const { startUrl, name, wait, delay, skipUrls, urlPattern, showHelp } = parseArgs();
+
+  if (showHelp) {
+    showUsage();
+    process.exit(0);
+  }
 
   if (!startUrl) {
-    console.error('Usage: npm run all -- <start-url> [options]');
-    console.error('Example: npm run all -- https://example.com/book --name "My Book"');
-    console.error('Options:');
-    console.error('  --name "title"       Book title (default: "Book")');
-    console.error('  --wait ms            Page render wait time (default: 1000)');
-    console.error('  --delay ms           Delay between chapters (default: 1000)');
-    console.error('  --skip <url>         Skip specific URL (can be used multiple times)');
-    console.error('  --url-pattern <p>    Only include URLs matching glob pattern');
+    showUsage();
     process.exit(1);
   }
 

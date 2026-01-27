@@ -46,7 +46,6 @@ Technical debt and code quality issues identified during code review.
 
 - [ ] **Global mutable state** (`scrape.ts:29`) - `imageCounter` is module-level mutable state. Causes potential race conditions with parallel downloads and test isolation issues. Use parameter injection or UUIDs instead.
 - [ ] **Duplicate argument parsing** (`scrape.ts`, `index.ts`) - Both files implement similar `parseArgs()` functions. Extract to shared utility.
-- [ ] **Duplicate type definitions** - `ChapterMeta` and `BookMeta` defined in both `scrape.ts` and `merge.ts`. Create shared `types.ts`.
 - [ ] **Mixed concerns in scrape.ts** - Single file handles CLI parsing, browser lifecycle, DOM extraction, image processing, and file I/O. Consider splitting into smaller modules.
 
 ### Input Validation & Security
@@ -66,7 +65,6 @@ Technical debt and code quality issues identified during code review.
 
 ### Developer Experience
 
-- [ ] **No --help flag** - Running `--help` tries to scrape it as a URL. Add help flag support to all CLI commands.
 - [ ] **No configuration file support** - All options must be passed via CLI. Support optional `.tildascraperrc.json` for repeated use.
 - [ ] **No dry-run mode** - Can't preview what would be scraped without actually scraping.
 - [ ] **Build doesn't run tests** (`package.json`) - `npm run build` only runs `tsc`. Should run tests first.
@@ -85,6 +83,8 @@ Technical debt and code quality issues identified during code review.
 
 ## Completed
 
+- [x] Create shared `types.ts` for `ChapterMeta` and `BookMeta` type definitions
+- [x] Add `--help` flag support to all CLI commands
 - [x] Add tests for image download/save functions and PDF exception handling
 - [x] Add graceful Ctrl+C handling with clean exit message
 - [x] Add elapsed time display for pipeline steps

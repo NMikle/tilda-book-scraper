@@ -77,6 +77,27 @@ export interface ScraperOptions {
   skipUrls: string[];
   /** Glob pattern to filter URLs */
   urlPattern: string | null;
+  /** Whether to show help and exit */
+  showHelp: boolean;
+}
+
+/**
+ * Print usage information for the scrape command.
+ */
+function showUsage(): void {
+  console.log('Usage: npm run scrape -- <start-url> [options]');
+  console.log('');
+  console.log('Scrape book chapters from a Tilda-based website.');
+  console.log('');
+  console.log('Options:');
+  console.log('  --wait <ms>          Page render wait time (default: 1000)');
+  console.log('  --delay <ms>         Delay between chapters (default: 1000)');
+  console.log('  --skip <url>         Skip specific URL (can be used multiple times)');
+  console.log('  --url-pattern <p>    Only include URLs matching glob pattern');
+  console.log('  --help, -h           Show this help message');
+  console.log('');
+  console.log('Example:');
+  console.log('  npm run scrape -- https://example.com/book --wait 2000');
 }
 
 /**
@@ -91,9 +112,12 @@ export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOption
   let chapterDelay = DEFAULT_CHAPTER_DELAY;
   const skipUrls: string[] = [];
   let urlPattern: string | null = null;
+  let showHelp = false;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--wait' && args[i + 1]) {
+    if (args[i] === '--help' || args[i] === '-h') {
+      showHelp = true;
+    } else if (args[i] === '--wait' && args[i + 1]) {
       pageWait = parseInt(args[i + 1], 10);
       i++;
     } else if (args[i] === '--delay' && args[i + 1]) {
@@ -110,7 +134,7 @@ export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOption
     }
   }
 
-  return { startUrl, pageWait, chapterDelay, skipUrls, urlPattern };
+  return { startUrl, pageWait, chapterDelay, skipUrls, urlPattern, showHelp };
 }
 
 const turndown = new TurndownService({
@@ -453,16 +477,15 @@ async function scrapeChapter(
  * @throws Exits with code 1 if no URL provided or scraping fails
  */
 export async function main(): Promise<void> {
-  const { startUrl, pageWait, chapterDelay, skipUrls, urlPattern } = parseArgs();
+  const { startUrl, pageWait, chapterDelay, skipUrls, urlPattern, showHelp } = parseArgs();
+
+  if (showHelp) {
+    showUsage();
+    process.exit(0);
+  }
 
   if (!startUrl) {
-    console.error('Usage: npm run scrape -- <start-url> [options]');
-    console.error('Example: npm run scrape -- https://example.com/book');
-    console.error('Options:');
-    console.error('  --wait ms           Page render wait time (default: 1000)');
-    console.error('  --delay ms          Delay between chapters (default: 1000)');
-    console.error('  --skip <url>        Skip specific URL (can be used multiple times)');
-    console.error('  --url-pattern <p>   Only include URLs matching glob pattern');
+    showUsage();
     process.exit(1);
   }
 

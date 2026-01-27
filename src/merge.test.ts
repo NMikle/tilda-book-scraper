@@ -14,27 +14,35 @@ import * as fs from 'fs/promises';
 
 describe('parseArgs', () => {
   it('returns default name when no args provided', () => {
-    expect(parseArgs([])).toEqual({ name: 'Book' });
+    expect(parseArgs([])).toEqual({ name: 'Book', showHelp: false });
   });
 
   it('parses --name flag', () => {
-    expect(parseArgs(['--name', 'My Book'])).toEqual({ name: 'My Book' });
+    expect(parseArgs(['--name', 'My Book'])).toEqual({ name: 'My Book', showHelp: false });
   });
 
   it('handles name with spaces', () => {
-    expect(parseArgs(['--name', 'My Amazing Book Title'])).toEqual({ name: 'My Amazing Book Title' });
+    expect(parseArgs(['--name', 'My Amazing Book Title'])).toEqual({ name: 'My Amazing Book Title', showHelp: false });
   });
 
   it('ignores unknown flags', () => {
-    expect(parseArgs(['--unknown', 'value', '--name', 'Test'])).toEqual({ name: 'Test' });
+    expect(parseArgs(['--unknown', 'value', '--name', 'Test'])).toEqual({ name: 'Test', showHelp: false });
   });
 
   it('uses default when --name has no value', () => {
-    expect(parseArgs(['--name'])).toEqual({ name: 'Book' });
+    expect(parseArgs(['--name'])).toEqual({ name: 'Book', showHelp: false });
   });
 
   it('uses last --name value when multiple provided', () => {
-    expect(parseArgs(['--name', 'First', '--name', 'Second'])).toEqual({ name: 'Second' });
+    expect(parseArgs(['--name', 'First', '--name', 'Second'])).toEqual({ name: 'Second', showHelp: false });
+  });
+
+  it('parses --help flag', () => {
+    expect(parseArgs(['--help'])).toEqual({ name: 'Book', showHelp: true });
+  });
+
+  it('parses -h flag', () => {
+    expect(parseArgs(['-h'])).toEqual({ name: 'Book', showHelp: true });
   });
 });
 

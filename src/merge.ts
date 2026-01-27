@@ -18,22 +18,41 @@ const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
 
 /**
+ * Print usage information for the merge command.
+ */
+function showUsage(): void {
+  console.log('Usage: npm run merge [-- --name "Book Title"]');
+  console.log('');
+  console.log('Merge scraped chapters into a single markdown document with TOC.');
+  console.log('');
+  console.log('Options:');
+  console.log('  --name <title>       Book title for the document (default: "Book")');
+  console.log('  --help, -h           Show this help message');
+  console.log('');
+  console.log('Example:');
+  console.log('  npm run merge -- --name "My Book Title"');
+}
+
+/**
  * Parse command line arguments for the merge command.
  *
  * @param args - Command line arguments (defaults to process.argv)
- * @returns Parsed options with book name
+ * @returns Parsed options with book name and help flag
  */
-export function parseArgs(args: string[] = process.argv.slice(2)): { name: string } {
+export function parseArgs(args: string[] = process.argv.slice(2)): { name: string; showHelp: boolean } {
   let name = 'Book';
+  let showHelp = false;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--name' && args[i + 1]) {
+    if (args[i] === '--help' || args[i] === '-h') {
+      showHelp = true;
+    } else if (args[i] === '--name' && args[i + 1]) {
       name = args[i + 1];
       i++;
     }
   }
 
-  return { name };
+  return { name, showHelp };
 }
 
 /**
@@ -67,7 +86,12 @@ export function generateTocEntry(chapter: ChapterMeta): string {
  * @throws Exits with code 1 if meta.json is missing or has no chapters
  */
 export async function main(): Promise<void> {
-  const { name } = parseArgs();
+  const { name, showHelp } = parseArgs();
+
+  if (showHelp) {
+    showUsage();
+    process.exit(0);
+  }
 
   // Check if meta.json exists
   try {

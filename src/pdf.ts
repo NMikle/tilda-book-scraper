@@ -18,12 +18,44 @@ const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.pdf');
 const STYLES_FILE = path.join(__dirname, 'styles.css');
 
 /**
+ * Print usage information for the pdf command.
+ */
+function showUsage(): void {
+  console.log('Usage: npm run pdf');
+  console.log('');
+  console.log('Convert merged markdown (book.md) to PDF.');
+  console.log('');
+  console.log('Options:');
+  console.log('  --help, -h           Show this help message');
+  console.log('');
+  console.log('Requires: output/book.md (run "npm run merge" first)');
+}
+
+/**
+ * Parse command line arguments for the pdf command.
+ *
+ * @param args - Command line arguments (defaults to process.argv)
+ * @returns Parsed options with help flag
+ */
+export function parseArgs(args: string[] = process.argv.slice(2)): { showHelp: boolean } {
+  const showHelp = args.includes('--help') || args.includes('-h');
+  return { showHelp };
+}
+
+/**
  * Main entry point for PDF generation.
  * Converts book.md to book.pdf using md-to-pdf with custom styling.
  *
  * @throws Exits with code 1 if book.md is missing or PDF generation fails
  */
 export async function main(): Promise<void> {
+  const { showHelp } = parseArgs();
+
+  if (showHelp) {
+    showUsage();
+    process.exit(0);
+  }
+
   // Check if book.md exists
   try {
     await fs.access(INPUT_FILE);

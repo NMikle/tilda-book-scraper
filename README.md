@@ -40,6 +40,7 @@ npm run all -- <url> [options]
 - `--delay ms` - Delay between chapters in milliseconds (default: 1000)
 - `--skip <url>` - Skip specific URL (can be used multiple times, scrape only)
 - `--url-pattern <glob>` - Only include URLs matching glob pattern (scrape only)
+- `--help, -h` - Show help message
 
 **Examples:**
 
