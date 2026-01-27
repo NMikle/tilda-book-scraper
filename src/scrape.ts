@@ -16,7 +16,7 @@ import TurndownService from 'turndown';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl } from './utils.js';
+import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt } from './utils.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
@@ -457,6 +457,11 @@ export async function main(): Promise<void> {
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
+  // Register browser cleanup for graceful shutdown on Ctrl+C
+  onInterrupt(async () => {
+    await browser.close();
+  });
+
   const page = await browser.newPage();
 
   // Set realistic user agent
@@ -577,5 +582,6 @@ export async function main(): Promise<void> {
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
+  setupSignalHandlers('Scraping');
   main();
 }

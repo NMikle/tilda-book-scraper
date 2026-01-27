@@ -3,6 +3,58 @@
  * Extracted for testability
  */
 
+/** Callback for cleanup actions when process is interrupted */
+type CleanupCallback = () => void | Promise<void>;
+
+/** Registered cleanup callbacks for SIGINT handling */
+const cleanupCallbacks: CleanupCallback[] = [];
+
+/** Flag to prevent multiple SIGINT handlers from running */
+let isExiting = false;
+
+/**
+ * Register a cleanup callback to be called when the process receives SIGINT.
+ * Multiple callbacks can be registered and will be called in order.
+ *
+ * @param callback - Async or sync function to call during cleanup
+ */
+export function onInterrupt(callback: CleanupCallback): void {
+  cleanupCallbacks.push(callback);
+}
+
+/**
+ * Setup graceful shutdown handlers for SIGINT (Ctrl+C) and SIGTERM.
+ * Displays a clean message instead of a stack trace when interrupted.
+ * Should be called once at the start of the main entry point.
+ *
+ * @param commandName - Name of the command for the exit message (e.g., "Scraping", "PDF generation")
+ */
+export function setupSignalHandlers(commandName: string): void {
+  const handler = async (signal: string) => {
+    if (isExiting) return;
+    isExiting = true;
+
+    console.log(`\n${commandName} interrupted.`);
+
+    // Run cleanup callbacks
+    for (const callback of cleanupCallbacks) {
+      try {
+        await callback();
+      } catch {
+        // Ignore cleanup errors during shutdown
+      }
+    }
+
+    // Exit with appropriate code (128 + signal number)
+    // SIGINT = 2, SIGTERM = 15
+    const exitCode = signal === 'SIGINT' ? 130 : 143;
+    process.exit(exitCode);
+  };
+
+  process.on('SIGINT', () => handler('SIGINT'));
+  process.on('SIGTERM', () => handler('SIGTERM'));
+}
+
 /**
  * Convert a simple glob pattern to a RegExp.
  * Supports: * (any chars except /), ** (any chars including /), ? (single char)

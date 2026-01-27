@@ -6,7 +6,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { generateAnchor } from './utils.js';
+import { generateAnchor, setupSignalHandlers } from './utils.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
@@ -148,6 +148,7 @@ export async function main(): Promise<void> {
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
+  setupSignalHandlers('Merge');
   main().catch((error) => {
     console.error('Error:', error);
     process.exit(1);

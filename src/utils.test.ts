@@ -253,3 +253,17 @@ describe('deduplicateContentParts', () => {
     expect(result).toHaveLength(2);
   });
 });
+
+describe('setupSignalHandlers', () => {
+  it('is exported from utils', async () => {
+    const utils = await import('./utils.js');
+    expect(typeof utils.setupSignalHandlers).toBe('function');
+  });
+});
+
+describe('onInterrupt', () => {
+  it('is exported from utils', async () => {
+    const utils = await import('./utils.js');
+    expect(typeof utils.onInterrupt).toBe('function');
+  });
+});

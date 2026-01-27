@@ -5,6 +5,7 @@
  */
 
 import { execSync } from 'child_process';
+import { setupSignalHandlers } from './utils.js';
 
 /**
  * Format duration in milliseconds to human-readable string.
@@ -182,5 +183,6 @@ export async function main(): Promise<void> {
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
+  setupSignalHandlers('Pipeline');
   main();
 }

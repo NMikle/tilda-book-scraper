@@ -8,6 +8,7 @@ import { mdToPdf } from 'md-to-pdf';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { setupSignalHandlers } from './utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -70,6 +71,7 @@ export async function main(): Promise<void> {
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
+  setupSignalHandlers('PDF generation');
   main().catch((error) => {
     console.error('Error:', error);
     process.exit(1);
