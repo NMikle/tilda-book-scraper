@@ -4,15 +4,15 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Increase test coverage to 90%+** - Overall: 67%
+- [ ] **Increase test coverage to 90%+** - Overall: 66%
 
 | File | Coverage | Status |
 |------|----------|--------|
-| index.ts | 98% | :green_circle: |
-| utils.ts | 73% | :yellow_circle: (signal handlers hard to test) |
-| merge.ts | 92% | :green_circle: |
-| pdf.ts | 85% | :green_circle: |
-| scrape.ts | 51% | :yellow_circle: (browser-context code limits this) |
+| index.ts | 96% | :green_circle: |
+| utils.ts | 71% | :yellow_circle: (signal handlers hard to test) |
+| merge.ts | 77% | :yellow_circle: |
+| pdf.ts | 65% | :yellow_circle: |
+| scrape.ts | 52% | :yellow_circle: (browser-context code limits this) |
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
 
@@ -59,10 +59,6 @@ Technical debt and code quality issues identified during code review.
 
 - [ ] **No integration tests** - All tests use mocks. Add integration test with sample HTML fixtures to verify actual file generation.
 
-### Code Style & Consistency
-
-- [ ] **Inconsistent error message format** - Some errors start with "Error:", some with "Usage:", some lowercase. Standardize format.
-
 ### Developer Experience
 
 - [ ] **No configuration file support** - All options must be passed via CLI. Support optional `.tildascraperrc.json` for repeated use.
@@ -85,6 +81,7 @@ Technical debt and code quality issues identified during code review.
 
 - [x] Create shared `types.ts` for `ChapterMeta` and `BookMeta` type definitions
 - [x] Add `--help` flag support to all CLI commands
+- [x] Standardize error message format to use "Error:" prefix
 - [x] Add tests for image download/save functions and PDF exception handling
 - [x] Add graceful Ctrl+C handling with clean exit message
 - [x] Add elapsed time display for pipeline steps

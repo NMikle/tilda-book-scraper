@@ -199,7 +199,7 @@ export async function main(): Promise<void> {
     console.log('  - output/book.md        (merged document)');
     console.log('  - output/book.pdf       (final PDF)');
   } catch (error) {
-    console.error('\nPipeline failed:', error);
+    console.error('\nError:', error);
     process.exit(1);
   }
 }

@@ -108,6 +108,11 @@ const actualUrl = transformTildaImageUrl(url);
 | Functions | `parseArgs`, `downloadImage` | `args`, `image` |
 | Constants | `DEFAULT_PAGE_WAIT`, `TOC_LINK_THRESHOLD` | `wait`, `threshold` |
 
+### Error Messages
+Use consistent prefixes for user-facing messages:
+- `Error:` for errors
+- `Warning:` for non-fatal issues
+
 ### Structure
 - Keep functions small and focused - one responsibility per function
 - Extract reusable logic to `utils.ts`

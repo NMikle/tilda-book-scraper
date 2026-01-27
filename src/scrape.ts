@@ -621,7 +621,7 @@ export async function main(): Promise<void> {
       process.exit(1);
     }
   } catch (error) {
-    console.error('Error during scraping:', error);
+    console.error('Error:', error);
     process.exit(1);
   } finally {
     await browser.close();

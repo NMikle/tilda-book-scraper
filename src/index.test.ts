@@ -266,7 +266,7 @@ describe('main', () => {
     await expect(main()).rejects.toThrow('process.exit called');
 
     expect(mockConsoleError).toHaveBeenCalledWith(
-      '\nPipeline failed:',
+      '\nError:',
       expect.any(Error)
     );
     expect(mockExit).toHaveBeenCalledWith(1);
