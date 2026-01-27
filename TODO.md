@@ -4,15 +4,15 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Increase test coverage to 90%+** - Overall: 64%
+- [ ] **Increase test coverage to 90%+** - Overall: 67%
 
 | File | Coverage | Status |
 |------|----------|--------|
 | index.ts | 98% | :green_circle: |
 | utils.ts | 73% | :yellow_circle: (signal handlers hard to test) |
 | merge.ts | 92% | :green_circle: |
-| pdf.ts | 73% | :yellow_circle: |
-| scrape.ts | 45% | :red_circle: (browser-context code limits this) |
+| pdf.ts | 85% | :green_circle: |
+| scrape.ts | 51% | :yellow_circle: (browser-context code limits this) |
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
 
@@ -85,6 +85,7 @@ Technical debt and code quality issues identified during code review.
 
 ## Completed
 
+- [x] Add tests for image download/save functions and PDF exception handling
 - [x] Add graceful Ctrl+C handling with clean exit message
 - [x] Add elapsed time display for pipeline steps
 - [x] Deduplicate content blocks during chapter extraction
