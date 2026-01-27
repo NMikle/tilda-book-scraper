@@ -79,6 +79,12 @@ output/        # Generated files (gitignored)
 - Use mocks for external dependencies (puppeteer, fs, network) - never make real calls in tests
 - **NEVER remove or delete tests** without explicit user confirmation and strong justification
 
+**Coverage requirements:**
+- New code must have at least 90% test coverage
+- Overall coverage must not drop after changes
+- Run `npm test -- --coverage` to check coverage before committing
+- Update coverage numbers in TODO.md when they change
+
 **What to mock:**
 ```typescript
 vi.mock('puppeteer', () => ({ default: { launch: vi.fn() } }));

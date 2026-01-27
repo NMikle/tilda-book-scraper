@@ -259,4 +259,22 @@ describe('main', () => {
     expect(content).toContain('1. [Chapter 1](#chapter-1)');
     expect(content).toContain('2. [Chapter 2](#chapter-2)');
   });
+
+  it('shows help and exits with code 0 when --help flag is provided', async () => {
+    const originalArgv = process.argv;
+    process.argv = ['node', 'merge.ts', '--help'];
+
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    const { main } = await import('./merge.js');
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      expect.stringContaining('Usage:')
+    );
+    expect(mockExit).toHaveBeenCalledWith(0);
+
+    process.argv = originalArgv;
+  });
 });
