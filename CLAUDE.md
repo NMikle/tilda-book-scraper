@@ -43,6 +43,7 @@ src/
   pdf.ts       # md-to-pdf conversion with custom styles
   index.ts     # Full pipeline orchestration
   styles.css   # PDF typography styles
+  types.ts     # Shared type definitions (ChapterMeta, BookMeta)
   utils.ts     # Shared utility functions (extract here for reuse)
 
 output/        # Generated files (gitignored)

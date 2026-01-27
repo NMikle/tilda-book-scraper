@@ -17,6 +17,7 @@ import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt } from './utils.js';
+import type { ChapterMeta, BookMeta } from './types.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
@@ -120,18 +121,6 @@ const turndown = new TurndownService({
 // Remove script/style elements from conversion
 turndown.remove(['script', 'style', 'noscript', 'iframe']);
 
-interface ChapterMeta {
-  index: number;
-  title: string;
-  url: string;
-  filename: string;
-}
-
-interface BookMeta {
-  scrapedAt: string;
-  startUrl: string;
-  chapters: ChapterMeta[];
-}
 
 /**
  * Wait for specified milliseconds.

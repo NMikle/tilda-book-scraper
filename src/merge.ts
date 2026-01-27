@@ -7,33 +7,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { generateAnchor, setupSignalHandlers } from './utils.js';
+import type { ChapterMeta, BookMeta } from './types.js';
+
+// Re-export types for backwards compatibility
+export type { ChapterMeta, BookMeta } from './types.js';
 
 const OUTPUT_DIR = 'output';
 const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
 const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
-
-/** Metadata for a single chapter */
-export interface ChapterMeta {
-  /** Zero-based index of the chapter */
-  index: number;
-  /** Chapter title extracted from the page */
-  title: string;
-  /** Original URL of the chapter */
-  url: string;
-  /** Local filename (e.g., '001-introduction.md') */
-  filename: string;
-}
-
-/** Metadata for the entire book, stored in meta.json */
-export interface BookMeta {
-  /** ISO timestamp when scraping was performed */
-  scrapedAt: string;
-  /** Starting URL for the scrape */
-  startUrl: string;
-  /** Array of chapter metadata in order */
-  chapters: ChapterMeta[];
-}
 
 /**
  * Parse command line arguments for the merge command.
