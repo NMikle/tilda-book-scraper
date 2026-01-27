@@ -44,10 +44,10 @@ Technical debt and code quality issues identified during code review.
 
 ### Error Handling & Logging
 
-- [ ] **Silent image download failures** (`scrape.ts:138-177`) - Failed downloads return `null` silently with no logging. Users don't know which images failed or why. Add logging with URL and error details.
-- [ ] **No error recovery for failed chapters** (`scrape.ts:479-510`) - If one chapter fails, entire pipeline stops. Consider continuing with remaining chapters and reporting failures at end.
-- [ ] **Catch-all error suppression** (`scrape.ts:176`) - `catch {}` swallows all errors without discrimination. Should log or handle different error types.
-- [ ] **No PDF generation error details** (`pdf.ts:59`) - PDF failures don't include underlying cause.
+- [x] **Silent image download failures** (`scrape.ts:138-177`) - Failed downloads return `null` silently with no logging. Users don't know which images failed or why. Add logging with URL and error details. *(Now tracks failures and shows summary at end)*
+- [x] **No error recovery for failed chapters** (`scrape.ts:479-510`) - If one chapter fails, entire pipeline stops. Consider continuing with remaining chapters and reporting failures at end. *(Now continues scraping and reports all failures at end)*
+- [x] **Catch-all error suppression** (`scrape.ts:176`) - `catch {}` swallows all errors without discrimination. Should log or handle different error types. *(Now tracked in failure count)*
+- [x] **No PDF generation error details** (`pdf.ts:59`) - PDF failures don't include underlying cause. *(Now includes error message)*
 
 ### Architecture & Design
 
