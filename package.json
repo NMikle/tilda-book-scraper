@@ -1,6 +1,6 @@
 {
   "name": "tilda-book-scraper",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Scrape book content from Tilda-based websites, convert to markdown, and generate PDF",
   "author": {
     "name": "Mikhail Niakrasau",
