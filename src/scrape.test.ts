@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseArgs, delay, progressBar } from './scrape.js';
+import { parseArgs, delay, progressBar, downloadImage, saveImage, resetImageCounters, getImageCounters } from './scrape.js';
 
 // Mock all external dependencies
 vi.mock('puppeteer', () => ({
@@ -185,6 +185,180 @@ describe('progressBar', () => {
 
     const output = mockStdoutWrite.mock.calls[0][0] as string;
     expect(output).toContain('Short');
+  });
+});
+
+describe('image counter functions', () => {
+  beforeEach(() => {
+    resetImageCounters();
+  });
+
+  it('resetImageCounters resets both counters to zero', () => {
+    // First verify counters start at zero
+    const initial = getImageCounters();
+    expect(initial.imageCounter).toBe(0);
+    expect(initial.failedImageCount).toBe(0);
+  });
+
+  it('getImageCounters returns current counter values', () => {
+    const counters = getImageCounters();
+    expect(counters).toHaveProperty('imageCounter');
+    expect(counters).toHaveProperty('failedImageCount');
+  });
+});
+
+describe('downloadImage', () => {
+  let mockFetch: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    resetImageCounters();
+    vi.clearAllMocks();
+    mockFetch = vi.spyOn(global, 'fetch');
+  });
+
+  afterEach(() => {
+    mockFetch.mockRestore();
+  });
+
+  it('downloads and saves image successfully', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(imageBuffer),
+    } as Response);
+
+    const result = await downloadImage('https://static.tildacdn.com/tild1234/image.png', 0);
+
+    expect(result).toBe('img-0000.jpg');
+    expect(mockFetch).toHaveBeenCalledWith('https://static.tildacdn.com/tild1234/image.png');
+  });
+
+  it('transforms Tilda placeholder URLs before downloading', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(imageBuffer),
+    } as Response);
+
+    await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 1);
+
+    // Verify the URL was transformed from thb (placeholder) to static (actual)
+    expect(mockFetch).toHaveBeenCalledWith('https://static.tildacdn.com/tild1234/image.png');
+  });
+
+  it('falls back to original URL when transformed URL fails', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+    // First call (transformed URL) fails
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+    // Second call (original URL) succeeds
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(imageBuffer),
+    } as Response);
+
+    const result = await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 2);
+
+    expect(result).toBe('img-0002.jpg');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns null and increments counter when both URLs fail', async () => {
+    // First call (transformed URL) fails
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+    // Second call (original URL) also fails
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    const result = await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 3);
+
+    expect(result).toBeNull();
+    const counters = getImageCounters();
+    expect(counters.failedImageCount).toBe(1);
+  });
+
+  it('returns null and increments counter on network error', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await downloadImage('https://static.tildacdn.com/tild1234/image.png', 4);
+
+    expect(result).toBeNull();
+    const counters = getImageCounters();
+    expect(counters.failedImageCount).toBe(1);
+  });
+
+  it('handles non-Tilda URLs without transformation', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(imageBuffer),
+    } as Response);
+
+    await downloadImage('https://example.com/image.png', 5);
+
+    expect(mockFetch).toHaveBeenCalledWith('https://example.com/image.png');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns null when non-Tilda URL fails', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    const result = await downloadImage('https://example.com/image.png', 6);
+
+    expect(result).toBeNull();
+    // No fallback for non-Tilda URLs, so only one fetch
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('saveImage', () => {
+  beforeEach(() => {
+    resetImageCounters();
+    vi.clearAllMocks();
+  });
+
+  it('saves image as JPEG with correct filename', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+
+    const result = await saveImage(imageBuffer, 7);
+
+    expect(result).toBe('img-0007.jpg');
+  });
+
+  it('pads image index with zeros', async () => {
+    const imageBuffer = Buffer.from('fake-image-data');
+
+    const result = await saveImage(imageBuffer, 123);
+
+    expect(result).toBe('img-0123.jpg');
+  });
+
+  it('returns null and increments counter on sharp error', async () => {
+    // Get the mocked sharp module and make toFile throw
+    const sharp = (await import('sharp')).default;
+    vi.mocked(sharp).mockReturnValueOnce({
+      flatten: vi.fn().mockReturnThis(),
+      jpeg: vi.fn().mockReturnThis(),
+      toFile: vi.fn().mockRejectedValueOnce(new Error('Sharp error')),
+    } as any);
+
+    const imageBuffer = Buffer.from('corrupted-image-data');
+
+    const result = await saveImage(imageBuffer, 8);
+
+    expect(result).toBeNull();
+    const counters = getImageCounters();
+    expect(counters.failedImageCount).toBe(1);
   });
 });
 

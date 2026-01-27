@@ -96,4 +96,34 @@ describe('main', () => {
       expect.stringContaining('5.00 MB')
     );
   });
+
+  it('extracts error message when mdToPdf throws an Error', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(mdToPdf).mockRejectedValue(new Error('Puppeteer crashed'));
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    const { main } = await import('./pdf.js');
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Puppeteer crashed')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('handles non-Error exceptions from mdToPdf', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(mdToPdf).mockRejectedValue('string error');
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    const { main } = await import('./pdf.js');
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('string error')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
 });

@@ -45,6 +45,25 @@ const TOC_LINK_THRESHOLD = 20;
 let imageCounter = 0;
 let failedImageCount = 0;
 
+/**
+ * Reset image counters for test isolation.
+ * Call this before each test that uses image functions.
+ */
+export function resetImageCounters(): void {
+  imageCounter = 0;
+  failedImageCount = 0;
+}
+
+/**
+ * Get current image counter values.
+ * Useful for verifying counter state in tests.
+ *
+ * @returns Object with imageCounter and failedImageCount values
+ */
+export function getImageCounters(): { imageCounter: number; failedImageCount: number } {
+  return { imageCounter, failedImageCount };
+}
+
 /** Configuration options for the scraper */
 export interface ScraperOptions {
   /** Starting URL to scrape */
@@ -152,7 +171,16 @@ export function progressBar(current: number, total: number, title: string): void
   }
 }
 
-async function downloadImage(url: string, index: number): Promise<string | null> {
+/**
+ * Download an image from a URL and save it locally.
+ * Transforms Tilda placeholder URLs to actual image URLs.
+ * Falls back to original URL if transformed URL fails.
+ *
+ * @param url - The image URL to download
+ * @param index - Image index for filename generation
+ * @returns Local filename if successful, null if failed
+ */
+export async function downloadImage(url: string, index: number): Promise<string | null> {
   // Transform placeholder URLs to actual image URLs
   const actualUrl = transformTildaImageUrl(url);
 
@@ -181,7 +209,15 @@ async function downloadImage(url: string, index: number): Promise<string | null>
   }
 }
 
-async function saveImage(buffer: Buffer, index: number): Promise<string | null> {
+/**
+ * Save an image buffer as JPEG with white background.
+ * Handles transparency by flattening with white background.
+ *
+ * @param buffer - Image data buffer
+ * @param index - Image index for filename generation
+ * @returns Local filename if successful, null if failed
+ */
+export async function saveImage(buffer: Buffer, index: number): Promise<string | null> {
   try {
     const filename = `img-${index.toString().padStart(4, '0')}.jpg`;
     const filepath = path.join(IMAGES_DIR, filename);
