@@ -78,7 +78,9 @@ describe('main', () => {
 
     await expect(main()).rejects.toThrow('process.exit called');
 
-    expect(mockConsoleError).toHaveBeenCalledWith('Error: PDF generation failed.');
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('PDF generation failed')
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 

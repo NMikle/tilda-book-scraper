@@ -33,30 +33,37 @@ export async function main(): Promise<void> {
 
   console.log(`Converting ${INPUT_FILE} to PDF...`);
 
-  const pdf = await mdToPdf(
-    { path: INPUT_FILE },
-    {
-      dest: OUTPUT_FILE,
-      pdf_options: {
-        format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm',
+  let pdf;
+  try {
+    pdf = await mdToPdf(
+      { path: INPUT_FILE },
+      {
+        dest: OUTPUT_FILE,
+        pdf_options: {
+          format: 'A4',
+          margin: {
+            top: '20mm',
+            right: '20mm',
+            bottom: '20mm',
+            left: '20mm',
+          },
+          printBackground: true,
         },
-        printBackground: true,
-      },
-      stylesheet: [STYLES_FILE],
-    }
-  );
+        stylesheet: [STYLES_FILE],
+      }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: PDF generation failed - ${message}`);
+    process.exit(1);
+  }
 
   if (pdf.filename) {
     const stats = await fs.stat(OUTPUT_FILE);
     const sizeMb = (stats.size / 1024 / 1024).toFixed(2);
     console.log(`PDF saved to: ${OUTPUT_FILE} (${sizeMb} MB)`);
   } else {
-    console.error('Error: PDF generation failed.');
+    console.error('Error: PDF generation failed - no output file was created.');
     process.exit(1);
   }
 }
