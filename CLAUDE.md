@@ -43,6 +43,7 @@ src/
   pdf.ts       # md-to-pdf conversion with custom styles
   index.ts     # Full pipeline orchestration
   styles.css   # PDF typography styles
+  utils.ts     # Shared utility functions (extract here for reuse)
 
 output/        # Generated files (gitignored)
   chapters/    # Individual chapter markdown files (001-title.md, 002-title.md, ...)
@@ -54,10 +55,88 @@ output/        # Generated files (gitignored)
 
 ## Tech Stack
 
-- **Puppeteer** - Required because site uses JS rendering (Tilda platform)
+- **Puppeteer** - Required because Tilda sites use JS rendering
 - **Turndown** - HTML to Markdown conversion
 - **sharp** - Image processing (convert to JPEG, handle transparency)
 - **md-to-pdf** - Markdown to styled PDF
+
+## Before Modifying Code
+
+1. **Read first** - Understand existing code before suggesting changes
+2. **Check for tests** - Find related test files (`*.test.ts`)
+3. **Match existing patterns** - Follow conventions already in the codebase
+4. **Run tests after changes** - Verify nothing broke
+
+## Testing
+
+**CRITICAL: Never commit code that fails tests.**
+
+- Run `npm test` before every commit
+- If tests fail: fix the issue, do not commit broken code
+- All new code must have corresponding tests
+- Use mocks for external dependencies (puppeteer, fs, network) - never make real calls in tests
+- **NEVER remove or delete tests** without explicit user confirmation and strong justification
+
+**What to mock:**
+```typescript
+vi.mock('puppeteer', () => ({ default: { launch: vi.fn() } }));
+vi.mock('fs/promises', () => ({ mkdir: vi.fn(), writeFile: vi.fn() }));
+```
+
+## Code Style
+
+### Documentation
+- All exported functions must have JSDoc comments
+- Complex logic needs inline comments explaining "why", not "what"
+
+```typescript
+// Good: explains why
+// Transform placeholder URLs - Tilda serves blank images from thb.tildacdn.com
+const actualUrl = transformTildaImageUrl(url);
+
+// Bad: restates the code
+// Call the transform function
+const actualUrl = transformTildaImageUrl(url);
+```
+
+### Naming
+| Pattern | Good | Bad |
+|---------|------|-----|
+| Booleans | `isComplete`, `hasError`, `shouldRetry` | `complete`, `error`, `retry` |
+| Functions | `parseArgs`, `downloadImage` | `args`, `image` |
+| Constants | `DEFAULT_PAGE_WAIT`, `TOC_LINK_THRESHOLD` | `wait`, `threshold` |
+
+### Structure
+- Keep functions small and focused - one responsibility per function
+- Extract reusable logic to `utils.ts`
+- Prefer early returns to reduce nesting
+
+```typescript
+// Good: early return
+if (!url) return null;
+const result = await fetch(url);
+return result;
+
+// Bad: unnecessary nesting
+if (url) {
+  const result = await fetch(url);
+  return result;
+}
+return null;
+```
+
+### TypeScript
+- Use explicit types for function signatures
+- Export interfaces for shared types
+- Avoid `any` - use proper types or `unknown`
+
+```typescript
+// Good
+function parseArgs(args: string[]): ScraperOptions { ... }
+
+// Bad
+function parseArgs(args): any { ... }
+```
 
 ## How the Scraper Works
 
@@ -71,46 +150,15 @@ output/        # Generated files (gitignored)
 
 ## Tilda Platform Notes
 
-- Tilda sites store content in `[data-record-type]` containers
-- Some sites have bot detection via user-agent - scraper uses realistic Chrome UA
+- Content stored in `[data-record-type]` containers
+- Bot detection exists - scraper uses realistic Chrome user-agent to avoid blocks
 - URL patterns vary: slugs (`/book-title`) or IDs (`/page12345.html`)
-- Configurable delays between requests (default 1s, adjustable via --delay)
-- Supports UTF-8 encoding (works with non-Latin text)
+- Supports UTF-8 encoding (works with Cyrillic and other non-Latin text)
 
 ### Tilda Image CDN
 
-Tilda uses placeholder images that must be transformed to get actual content:
+Tilda uses placeholder images that must be transformed:
 - `thb.tildacdn.com/tildXXXX/-/empty/image.png` → placeholder (blank)
 - `static.tildacdn.com/tildXXXX/image.png` → actual image
 
 The scraper automatically transforms these URLs. Images are converted to JPEG with white background (handles transparency issues in PDFs).
-
-## Testing
-
-- **Always run tests before committing** - Run `npm test` and ensure all tests pass before any commit
-- **Strive for maximum coverage** - All new code should have corresponding tests; target full coverage
-- **Use mocks for external dependencies** - Never test actual puppeteer, fs, or network calls; mock them instead
-- **Never break existing functionality** - If tests fail, fix the issue before committing
-
-## Code Style
-
-### Documentation
-- **All functions must have JSDoc comments** - Describe what the function does, its parameters, and return value
-- **Export functions should always be documented** - Public API must be clear and well-documented
-- **Complex logic needs inline comments** - Explain "why", not "what"
-
-### Naming
-- **Use descriptive names** - Variables and functions should be self-explanatory
-- **Boolean variables start with is/has/should** - e.g., `isComplete`, `hasError`, `shouldRetry`
-- **Functions start with verbs** - e.g., `parseArgs`, `downloadImage`, `generateAnchor`
-
-### Structure
-- **Keep functions small and focused** - Each function should do one thing well
-- **Extract reusable logic to utils.ts** - Shared utilities should be centralized and tested
-- **Group related code together** - Organize by feature/responsibility
-- **Prefer early returns** - Reduce nesting by handling edge cases first
-
-### TypeScript
-- **Use explicit types for function signatures** - Parameters and return types should be typed
-- **Export interfaces for shared types** - Make types reusable across modules
-- **Avoid `any` type** - Use proper types or `unknown` if type is truly unknown
