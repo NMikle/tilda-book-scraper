@@ -497,13 +497,22 @@ export async function main(): Promise<void> {
       }
     }
 
+    const failedChapters: { index: number; url: string; error: string }[] = [];
+
     if (links.length > TOC_LINK_THRESHOLD) {
       // This looks like a TOC page - scrape all linked chapters
       console.log(`Found ${links.length} chapters. Scraping...\n`);
 
       for (let i = 0; i < links.length; i++) {
-        const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait);
-        meta.chapters.push(chapterMeta);
+        try {
+          const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait);
+          meta.chapters.push(chapterMeta);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          failedChapters.push({ index: i, url: links[i], error: message });
+          // Show failure in progress bar position
+          progressBar(i + 1, links.length, `FAILED: ${links[i].slice(-30)}`);
+        }
 
         // Rate limiting - wait between chapters
         if (i < links.length - 1) {
@@ -518,8 +527,14 @@ export async function main(): Promise<void> {
       let index = 0;
 
       while (currentUrl) {
-        const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait);
-        meta.chapters.push(chapterMeta);
+        try {
+          const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait);
+          meta.chapters.push(chapterMeta);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          failedChapters.push({ index, url: currentUrl, error: message });
+          console.log(`  [${index + 1}] FAILED: ${currentUrl.slice(-40)}`);
+        }
 
         // Find next chapter link
         const nextUrl = await findNextChapterLink(page, baseUrl);
@@ -543,6 +558,14 @@ export async function main(): Promise<void> {
 
     if (failedImageCount > 0) {
       console.log(`Warning: ${failedImageCount} image(s) failed to download.`);
+    }
+
+    if (failedChapters.length > 0) {
+      console.log(`\nFailed chapters (${failedChapters.length}):`);
+      for (const { index, url } of failedChapters) {
+        console.log(`  [${index + 1}] ${url}`);
+      }
+      process.exit(1);
     }
   } catch (error) {
     console.error('Error during scraping:', error);
