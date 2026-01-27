@@ -43,6 +43,7 @@ const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Appl
 const TOC_LINK_THRESHOLD = 20;
 
 let imageCounter = 0;
+let failedImageCount = 0;
 
 /** Configuration options for the scraper */
 export interface ScraperOptions {
@@ -161,16 +162,21 @@ async function downloadImage(url: string, index: number): Promise<string | null>
       // If optimized URL fails, try original
       if (actualUrl !== url) {
         const fallbackResponse = await fetch(url);
-        if (!fallbackResponse.ok) return null;
+        if (!fallbackResponse.ok) {
+          failedImageCount++;
+          return null;
+        }
         const buffer = Buffer.from(await fallbackResponse.arrayBuffer());
         return await saveImage(buffer, index);
       }
+      failedImageCount++;
       return null;
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
     return await saveImage(buffer, index);
   } catch {
+    failedImageCount++;
     return null;
   }
 }
@@ -188,6 +194,7 @@ async function saveImage(buffer: Buffer, index: number): Promise<string | null> 
 
     return filename;
   } catch {
+    failedImageCount++;
     return null;
   }
 }
@@ -436,6 +443,10 @@ export async function main(): Promise<void> {
 
   const baseUrl = getBaseUrl(startUrl);
 
+  // Reset counters for this run
+  imageCounter = 0;
+  failedImageCount = 0;
+
   // Create output directories
   await fs.mkdir(CHAPTERS_DIR, { recursive: true });
   await fs.mkdir(IMAGES_DIR, { recursive: true });
@@ -529,6 +540,10 @@ export async function main(): Promise<void> {
     console.log(`\nSaved metadata to ${metaPath}`);
 
     console.log(`\nDone! Scraped ${meta.chapters.length} chapters.`);
+
+    if (failedImageCount > 0) {
+      console.log(`Warning: ${failedImageCount} image(s) failed to download.`);
+    }
   } catch (error) {
     console.error('Error during scraping:', error);
     process.exit(1);
