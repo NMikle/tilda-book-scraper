@@ -237,7 +237,7 @@ describe('downloadImage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
-    } as Response);
+    } as unknown as Response);
 
     const result = await downloadImage('https://static.tildacdn.com/tild1234/image.png', 0);
 
@@ -250,7 +250,7 @@ describe('downloadImage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
-    } as Response);
+    } as unknown as Response);
 
     await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 1);
 
@@ -269,7 +269,7 @@ describe('downloadImage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
-    } as Response);
+    } as unknown as Response);
 
     const result = await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 2);
 
@@ -311,7 +311,7 @@ describe('downloadImage', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
-    } as Response);
+    } as unknown as Response);
 
     await downloadImage('https://example.com/image.png', 5);
 

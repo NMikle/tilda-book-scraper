@@ -70,7 +70,6 @@ Technical debt and code quality issues identified during code review.
 - [ ] **No linting** - Missing ESLint/Biome configuration for consistent code style and catching issues.
 - [ ] **No pre-commit hooks** - No husky/lint-staged to enforce tests and linting before commits.
 - [ ] **No CI/CD** - No GitHub Actions to run tests on PRs.
-- [ ] **TypeScript could be stricter** - Missing `noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`.
 
 ### Documentation
 
@@ -99,3 +98,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Add edge case tests (empty pages, unicode titles, long title truncation)
 - [x] Extract magic numbers to named constants (`TILDA_SKIP_BLOCK_TYPES`)
 - [x] Extract hardcoded values to constants (`DEFAULT_USER_AGENT`, `TOC_LINK_THRESHOLD`)
+- [x] Enable stricter TypeScript options (`noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`)
