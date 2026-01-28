@@ -4,15 +4,15 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Increase test coverage to 90%+** - Overall: 71%
+- [ ] **Increase test coverage to 90%+** - Overall: 75%
 
 | File | Coverage | Status |
 |------|----------|--------|
-| index.ts | 98% | :green_circle: |
-| merge.ts | 95% | :green_circle: |
+| index.ts | 97% | :green_circle: |
+| merge.ts | 94% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
 | utils.ts | 89% | :yellow_circle: (signal handlers hard to test) |
-| scrape.ts | 53% | :yellow_circle: (browser-context code limits this) |
+| scrape.ts | 55% | :yellow_circle: (browser-context code limits this) |
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
 
@@ -44,7 +44,6 @@ Technical debt and code quality issues identified during code review.
 
 ### Architecture & Design
 
-- [ ] **Global mutable state** (`scrape.ts:29`) - `imageCounter` is module-level mutable state. Causes potential race conditions with parallel downloads and test isolation issues. Use parameter injection or UUIDs instead.
 - [ ] **Mixed concerns in scrape.ts** - Single file handles CLI parsing, browser lifecycle, DOM extraction, image processing, and file I/O. Consider splitting into smaller modules.
 
 ### Input Validation & Security
@@ -98,3 +97,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Add URL validation before `page.goto()` in scrape.ts
 - [x] Add meta.json schema validation in merge.ts
 - [x] Extract shared argument parsing utilities to utils.ts
+- [x] Replace global imageCounter with parameter injection (`ImageStats`)

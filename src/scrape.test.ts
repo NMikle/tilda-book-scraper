@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseArgs, delay, progressBar, downloadImage, saveImage, resetImageCounters, getImageCounters } from './scrape.js';
+import { parseArgs, delay, progressBar, downloadImage, saveImage, createImageStats, type ImageStats } from './scrape.js';
 
 // Mock all external dependencies
 vi.mock('puppeteer', () => ({
@@ -200,30 +200,29 @@ describe('progressBar', () => {
   });
 });
 
-describe('image counter functions', () => {
-  beforeEach(() => {
-    resetImageCounters();
+describe('createImageStats', () => {
+  it('creates stats with initial values of zero', () => {
+    const stats = createImageStats();
+    expect(stats.nextIndex).toBe(0);
+    expect(stats.failedCount).toBe(0);
   });
 
-  it('resetImageCounters resets both counters to zero', () => {
-    // First verify counters start at zero
-    const initial = getImageCounters();
-    expect(initial.imageCounter).toBe(0);
-    expect(initial.failedImageCount).toBe(0);
-  });
-
-  it('getImageCounters returns current counter values', () => {
-    const counters = getImageCounters();
-    expect(counters).toHaveProperty('imageCounter');
-    expect(counters).toHaveProperty('failedImageCount');
+  it('creates independent stats objects', () => {
+    const stats1 = createImageStats();
+    const stats2 = createImageStats();
+    stats1.nextIndex = 5;
+    stats1.failedCount = 2;
+    expect(stats2.nextIndex).toBe(0);
+    expect(stats2.failedCount).toBe(0);
   });
 });
 
 describe('downloadImage', () => {
   let mockFetch: ReturnType<typeof vi.spyOn>;
+  let stats: ImageStats;
 
   beforeEach(() => {
-    resetImageCounters();
+    stats = createImageStats();
     vi.clearAllMocks();
     mockFetch = vi.spyOn(global, 'fetch');
   });
@@ -289,21 +288,19 @@ describe('downloadImage', () => {
       status: 404,
     } as Response);
 
-    const result = await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 3);
+    const result = await downloadImage('https://thb.tildacdn.com/tild1234/-/empty/image.png', 3, stats);
 
     expect(result).toBeNull();
-    const counters = getImageCounters();
-    expect(counters.failedImageCount).toBe(1);
+    expect(stats.failedCount).toBe(1);
   });
 
   it('returns null and increments counter on network error', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await downloadImage('https://static.tildacdn.com/tild1234/image.png', 4);
+    const result = await downloadImage('https://static.tildacdn.com/tild1234/image.png', 4, stats);
 
     expect(result).toBeNull();
-    const counters = getImageCounters();
-    expect(counters.failedImageCount).toBe(1);
+    expect(stats.failedCount).toBe(1);
   });
 
   it('handles non-Tilda URLs without transformation', async () => {
@@ -334,8 +331,10 @@ describe('downloadImage', () => {
 });
 
 describe('saveImage', () => {
+  let stats: ImageStats;
+
   beforeEach(() => {
-    resetImageCounters();
+    stats = createImageStats();
     vi.clearAllMocks();
   });
 
@@ -366,11 +365,10 @@ describe('saveImage', () => {
 
     const imageBuffer = Buffer.from('corrupted-image-data');
 
-    const result = await saveImage(imageBuffer, 8);
+    const result = await saveImage(imageBuffer, 8, stats);
 
     expect(result).toBeNull();
-    const counters = getImageCounters();
-    expect(counters.failedImageCount).toBe(1);
+    expect(stats.failedCount).toBe(1);
   });
 });
 
@@ -607,5 +605,34 @@ describe('main', () => {
       expect.stringContaining('Usage:')
     );
     expect(mockExit).toHaveBeenCalledWith(0);
+  });
+
+  it('shows warning when images fail to download', async () => {
+    process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
+
+    // Mock fetch to fail for image downloads
+    const mockFetch = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    mockPage.evaluate
+      .mockResolvedValueOnce([]) // extractTocLinks
+      .mockResolvedValueOnce({
+        title: 'Chapter with Images',
+        html: '<p>Content</p>',
+        imageUrls: ['https://example.com/image1.png', 'https://example.com/image2.png']
+      })
+      .mockResolvedValueOnce(null); // no next link
+
+    const { main } = await import('./scrape.js');
+    await main();
+
+    // Should show warning about failed images
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      expect.stringContaining('Warning: 2 image(s) failed to download')
+    );
+
+    mockFetch.mockRestore();
   });
 });

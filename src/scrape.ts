@@ -43,26 +43,24 @@ const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Appl
 // Pages with fewer links are treated as chapter pages with "next" navigation
 const TOC_LINK_THRESHOLD = 20;
 
-let imageCounter = 0;
-let failedImageCount = 0;
-
 /**
- * Reset image counters for test isolation.
- * Call this before each test that uses image functions.
+ * Tracks image download statistics during scraping.
+ * Pass this to functions to avoid global mutable state.
  */
-export function resetImageCounters(): void {
-  imageCounter = 0;
-  failedImageCount = 0;
+export interface ImageStats {
+  /** Next available image index (incremented after each use) */
+  nextIndex: number;
+  /** Count of images that failed to download or save */
+  failedCount: number;
 }
 
 /**
- * Get current image counter values.
- * Useful for verifying counter state in tests.
+ * Create a new ImageStats object with initial values.
  *
- * @returns Object with imageCounter and failedImageCount values
+ * @returns Fresh ImageStats starting at index 0
  */
-export function getImageCounters(): { imageCounter: number; failedImageCount: number } {
-  return { imageCounter, failedImageCount };
+export function createImageStats(): ImageStats {
+  return { nextIndex: 0, failedCount: 0 };
 }
 
 /** Configuration options for the scraper */
@@ -174,9 +172,10 @@ export function progressBar(current: number, total: number, title: string): void
  *
  * @param url - The image URL to download
  * @param index - Image index for filename generation
+ * @param stats - Optional stats object to track failures
  * @returns Local filename if successful, null if failed
  */
-export async function downloadImage(url: string, index: number): Promise<string | null> {
+export async function downloadImage(url: string, index: number, stats?: ImageStats): Promise<string | null> {
   // Transform placeholder URLs to actual image URLs
   const actualUrl = transformTildaImageUrl(url);
 
@@ -187,20 +186,20 @@ export async function downloadImage(url: string, index: number): Promise<string 
       if (actualUrl !== url) {
         const fallbackResponse = await fetch(url);
         if (!fallbackResponse.ok) {
-          failedImageCount++;
+          if (stats) stats.failedCount++;
           return null;
         }
         const buffer = Buffer.from(await fallbackResponse.arrayBuffer());
-        return await saveImage(buffer, index);
+        return await saveImage(buffer, index, stats);
       }
-      failedImageCount++;
+      if (stats) stats.failedCount++;
       return null;
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    return await saveImage(buffer, index);
+    return await saveImage(buffer, index, stats);
   } catch {
-    failedImageCount++;
+    if (stats) stats.failedCount++;
     return null;
   }
 }
@@ -211,9 +210,10 @@ export async function downloadImage(url: string, index: number): Promise<string 
  *
  * @param buffer - Image data buffer
  * @param index - Image index for filename generation
+ * @param stats - Optional stats object to track failures
  * @returns Local filename if successful, null if failed
  */
-export async function saveImage(buffer: Buffer, index: number): Promise<string | null> {
+export async function saveImage(buffer: Buffer, index: number, stats?: ImageStats): Promise<string | null> {
   try {
     const filename = `img-${index.toString().padStart(4, '0')}.jpg`;
     const filepath = path.join(IMAGES_DIR, filename);
@@ -226,7 +226,7 @@ export async function saveImage(buffer: Buffer, index: number): Promise<string |
 
     return filename;
   } catch {
-    failedImageCount++;
+    if (stats) stats.failedCount++;
     return null;
   }
 }
@@ -402,7 +402,8 @@ async function scrapeChapter(
   url: string,
   index: number,
   total: number | undefined,
-  pageWait: number
+  pageWait: number,
+  stats: ImageStats
 ): Promise<ChapterMeta> {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
@@ -414,8 +415,8 @@ async function scrapeChapter(
   // Download images in parallel
   const uniqueUrls = [...new Set(imageUrls)];
   const downloadPromises = uniqueUrls.map(async (imgUrl) => {
-    const imgIndex = imageCounter++;
-    const localFile = await downloadImage(imgUrl, imgIndex);
+    const imgIndex = stats.nextIndex++;
+    const localFile = await downloadImage(imgUrl, imgIndex, stats);
     return { imgUrl, localFile };
   });
 
@@ -481,9 +482,8 @@ export async function main(): Promise<void> {
 
   const baseUrl = getBaseUrl(startUrl);
 
-  // Reset counters for this run
-  imageCounter = 0;
-  failedImageCount = 0;
+  // Track image statistics for this run
+  const imageStats = createImageStats();
 
   // Create output directories
   await fs.mkdir(CHAPTERS_DIR, { recursive: true });
@@ -548,7 +548,7 @@ export async function main(): Promise<void> {
 
       for (let i = 0; i < links.length; i++) {
         try {
-          const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait);
+          const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait, imageStats);
           meta.chapters.push(chapterMeta);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -571,7 +571,7 @@ export async function main(): Promise<void> {
 
       while (currentUrl) {
         try {
-          const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait);
+          const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait, imageStats);
           meta.chapters.push(chapterMeta);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -599,8 +599,8 @@ export async function main(): Promise<void> {
 
     console.log(`\nDone! Scraped ${meta.chapters.length} chapters.`);
 
-    if (failedImageCount > 0) {
-      console.log(`Warning: ${failedImageCount} image(s) failed to download.`);
+    if (imageStats.failedCount > 0) {
+      console.log(`Warning: ${imageStats.failedCount} image(s) failed to download.`);
     }
 
     if (failedChapters.length > 0) {
