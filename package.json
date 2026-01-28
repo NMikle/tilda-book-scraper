@@ -23,7 +23,8 @@
     "scrape": "tsx src/scrape.ts",
     "merge": "tsx src/merge.ts",
     "pdf": "tsx src/pdf.ts",
-    "all": "tsx src/index.ts"
+    "all": "tsx src/index.ts",
+    "prepare": "husky"
   },
   "keywords": [
     "tilda",
@@ -40,8 +41,15 @@
     "@types/node": "^22.10.0",
     "@types/turndown": "^5.0.5",
     "@vitest/coverage-v8": "^4.0.18",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "typescript": "^5.7.0",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "biome check --write"
+    ]
   },
   "dependencies": {
     "md-to-pdf": "^5.2.4",

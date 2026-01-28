@@ -64,8 +64,6 @@ Technical debt and code quality issues identified during code review.
 
 ### Tooling & Configuration
 
-- [x] **No linting** - Missing ESLint/Biome configuration for consistent code style and catching issues.
-- [ ] **No pre-commit hooks** - No husky/lint-staged to enforce tests and linting before commits.
 - [ ] **No CI/CD** - No GitHub Actions to run tests on PRs.
 
 ### Documentation
@@ -100,3 +98,5 @@ Technical debt and code quality issues identified during code review.
 - [x] Add meta.json schema validation in merge.ts
 - [x] Extract shared argument parsing utilities to utils.ts
 - [x] Replace global imageCounter with parameter injection (`ImageStats`)
+- [x] Add Biome linter for consistent code style and catching issues
+- [x] Add pre-commit hooks with husky/lint-staged
