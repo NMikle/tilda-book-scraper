@@ -112,6 +112,7 @@ export function transformTildaImageUrl(url: string): string {
 export function sanitizeFilename(title: string): string {
   return title
     .toLowerCase()
+    // Keep Latin (a-z), Cyrillic (а-яё), and digits; replace all else with dashes
     .replace(/[^a-zа-яё0-9]+/gi, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 50);
@@ -149,7 +150,8 @@ export function generateAnchor(title: string): string {
   return title
     .toLowerCase()
     .replace(/ /g, '-')                    // Replace spaces with hyphens
-    .replace(/[^a-zа-яё0-9-]/gi, '')       // Remove non-alphanumeric except hyphens
+    // Keep Latin (a-z), Cyrillic (а-яё), digits, and hyphens
+    .replace(/[^a-zа-яё0-9-]/gi, '')
     .replace(/^-+|-+$/g, '');              // Strip leading/trailing hyphens
 }
 

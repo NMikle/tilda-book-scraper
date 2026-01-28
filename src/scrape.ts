@@ -118,13 +118,13 @@ export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOption
   };
 }
 
-const turndown = new TurndownService({
+const markdownConverter = new TurndownService({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
 });
 
 // Remove script/style elements from conversion
-turndown.remove(['script', 'style', 'noscript', 'iframe']);
+markdownConverter.remove(['script', 'style', 'noscript', 'iframe']);
 
 
 /**
@@ -421,18 +421,20 @@ async function scrapeChapter(
   });
 
   const results = await Promise.all(downloadPromises);
-  const urlMap = new Map<string, string>();
+  // Map remote image URLs to local file paths
+  const imageUrlMap = new Map<string, string>();
   for (const { imgUrl, localFile } of results) {
     if (localFile) {
-      urlMap.set(imgUrl, `../images/${localFile}`);
+      imageUrlMap.set(imgUrl, `../images/${localFile}`);
     }
   }
 
   // Convert to markdown
-  let markdown = turndown.turndown(html);
+  let markdown = markdownConverter.turndown(html);
 
   // Replace remote image URLs with local paths
-  for (const [remoteUrl, localPath] of urlMap) {
+  // Using split/join as a global replace (avoids regex escaping issues with URLs)
+  for (const [remoteUrl, localPath] of imageUrlMap) {
     markdown = markdown.split(remoteUrl).join(localPath);
   }
 

@@ -13,7 +13,7 @@ Project roadmap and planned improvements.
 | merge.ts | 94% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
 | utils.ts | 89% | :yellow_circle: |
-| scrape.ts | 55% | :red_circle: |
+| scrape.ts | 56% | :red_circle: |
 <!-- COVERAGE-END -->
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
@@ -25,8 +25,8 @@ Project roadmap and planned improvements.
 | Add JSDoc to all exported functions in scrape.ts | :green_circle: |
 | Add JSDoc to all exported functions in pdf.ts | :green_circle: |
 | Add JSDoc to all exported functions in index.ts | :green_circle: |
-| Review and improve function/variable naming | :red_circle: |
-| Add inline comments for complex logic | :red_circle: |
+| Review and improve function/variable naming | :green_circle: |
+| Add inline comments for complex logic | :green_circle: |
 
 ## Medium Priority
 - [ ] **Add cover page support** - Option to include a cover image and styled title page in the PDF

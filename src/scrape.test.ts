@@ -635,4 +635,40 @@ describe('main', () => {
 
     mockFetch.mockRestore();
   });
+
+  it('replaces remote image URLs with local paths when images download successfully', async () => {
+    process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
+
+    // Mock fetch to succeed for image downloads
+    const imageBuffer = Buffer.from('fake-image-data');
+    const mockFetch = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(imageBuffer),
+    } as unknown as Response);
+
+    const imageUrl = 'https://static.tildacdn.com/tild1234/photo.jpg';
+    mockPage.evaluate
+      .mockResolvedValueOnce([]) // extractTocLinks
+      .mockResolvedValueOnce({
+        title: 'Chapter with Images',
+        html: `<p>Content with image</p><img src="${imageUrl}">`,
+        imageUrls: [imageUrl]
+      })
+      .mockResolvedValueOnce(null); // no next link
+
+    const { main } = await import('./scrape.js');
+    await main();
+
+    // Should write chapter file with local image path
+    const writeCall = vi.mocked(fs.writeFile).mock.calls.find(
+      call => typeof call[0] === 'string' && call[0].includes('chapters')
+    );
+    expect(writeCall).toBeDefined();
+    const content = writeCall![1] as string;
+    // Remote URL should be replaced with local path
+    expect(content).toContain('../images/img-');
+    expect(content).not.toContain(imageUrl);
+
+    mockFetch.mockRestore();
+  });
 });
