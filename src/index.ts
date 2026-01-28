@@ -4,8 +4,16 @@
  * Usage: npm run all -- <start-url> [options]
  */
 
-import { execSync } from 'child_process';
-import { setupSignalHandlers, hasHelpFlag, getStringArg, getNumberArg, getMultiStringArg, getNullableStringArg, getPositionalArg } from './utils.js';
+import { execSync } from "node:child_process";
+import {
+  getMultiStringArg,
+  getNullableStringArg,
+  getNumberArg,
+  getPositionalArg,
+  getStringArg,
+  hasHelpFlag,
+  setupSignalHandlers,
+} from "./utils.js";
 
 /**
  * Format duration in milliseconds to human-readable string.
@@ -54,19 +62,19 @@ export interface PipelineOptions {
  * Print usage information for the pipeline command.
  */
 function showUsage(): void {
-  console.log('Usage: npm run all -- <start-url> [options]');
-  console.log('');
-  console.log('Run the full pipeline: scrape → merge → pdf');
-  console.log('');
-  console.log('Options:');
+  console.log("Usage: npm run all -- <start-url> [options]");
+  console.log("");
+  console.log("Run the full pipeline: scrape → merge → pdf");
+  console.log("");
+  console.log("Options:");
   console.log('  --name <title>       Book title for the PDF (default: "Book")');
-  console.log('  --wait <ms>          Page render wait time (default: 1000)');
-  console.log('  --delay <ms>         Delay between chapters (default: 1000)');
-  console.log('  --skip <url>         Skip specific URL (can be used multiple times)');
-  console.log('  --url-pattern <p>    Only include URLs matching glob pattern');
-  console.log('  --help, -h           Show this help message');
-  console.log('');
-  console.log('Example:');
+  console.log("  --wait <ms>          Page render wait time (default: 1000)");
+  console.log("  --delay <ms>         Delay between chapters (default: 1000)");
+  console.log("  --skip <url>         Skip specific URL (can be used multiple times)");
+  console.log("  --url-pattern <p>    Only include URLs matching glob pattern");
+  console.log("  --help, -h           Show this help message");
+  console.log("");
+  console.log("Example:");
   console.log('  npm run all -- https://example.com/book --name "My Book"');
 }
 
@@ -77,16 +85,16 @@ function showUsage(): void {
  * @returns Parsed pipeline options
  */
 /** Flags that take values, used for positional argument detection */
-const PIPELINE_VALUE_FLAGS = ['--name', '--wait', '--delay', '--skip', '--url-pattern'];
+const PIPELINE_VALUE_FLAGS = ["--name", "--wait", "--delay", "--skip", "--url-pattern"];
 
 export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptions {
   return {
     startUrl: getPositionalArg(args, PIPELINE_VALUE_FLAGS),
-    name: getStringArg(args, '--name', 'Book'),
-    wait: getNumberArg(args, '--wait', 1000),
-    delay: getNumberArg(args, '--delay', 1000),
-    skipUrls: getMultiStringArg(args, '--skip'),
-    urlPattern: getNullableStringArg(args, '--url-pattern'),
+    name: getStringArg(args, "--name", "Book"),
+    wait: getNumberArg(args, "--wait", 1000),
+    delay: getNumberArg(args, "--delay", 1000),
+    skipUrls: getMultiStringArg(args, "--skip"),
+    urlPattern: getNullableStringArg(args, "--url-pattern"),
     showHelp: hasHelpFlag(args),
   };
 }
@@ -101,12 +109,12 @@ export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptio
  * @throws Re-throws any error from execSync
  */
 export function run(command: string, description: string): StepTiming {
-  console.log(`\n${'='.repeat(50)}`);
+  console.log(`\n${"=".repeat(50)}`);
   console.log(`Step: ${description}`);
-  console.log('='.repeat(50));
+  console.log("=".repeat(50));
 
   const start = Date.now();
-  execSync(command, { stdio: 'inherit' });
+  execSync(command, { stdio: "inherit" });
   const duration = Date.now() - start;
 
   console.log(`\n  Completed in ${formatDuration(duration)}`);
@@ -133,7 +141,7 @@ export async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log('Starting full pipeline...');
+  console.log("Starting full pipeline...");
   console.log(`URL: ${startUrl}`);
   console.log(`Book name: ${name}`);
 
@@ -149,43 +157,43 @@ export async function main(): Promise<void> {
     if (urlPattern) {
       scrapeCmd += ` --url-pattern "${urlPattern}"`;
     }
-    timings.push(run(scrapeCmd, 'Scraping chapters'));
+    timings.push(run(scrapeCmd, "Scraping chapters"));
 
     // Step 2: Merge
-    timings.push(run(`npx tsx src/merge.ts --name "${name}"`, 'Merging chapters'));
+    timings.push(run(`npx tsx src/merge.ts --name "${name}"`, "Merging chapters"));
 
     // Step 3: Generate PDF
-    timings.push(run('npx tsx src/pdf.ts', 'Generating PDF'));
+    timings.push(run("npx tsx src/pdf.ts", "Generating PDF"));
 
     const totalDuration = Date.now() - pipelineStart;
 
-    console.log('\n' + '='.repeat(50));
-    console.log('Pipeline complete!');
-    console.log('='.repeat(50));
+    console.log(`\n${"=".repeat(50)}`);
+    console.log("Pipeline complete!");
+    console.log("=".repeat(50));
 
     // Display timing summary
-    console.log('\nTiming Summary:');
-    console.log('-'.repeat(35));
+    console.log("\nTiming Summary:");
+    console.log("-".repeat(35));
     for (const { step, duration } of timings) {
       const stepName = step.padEnd(20);
       console.log(`  ${stepName} ${formatDuration(duration)}`);
     }
-    console.log('-'.repeat(35));
-    console.log(`  ${'Total'.padEnd(20)} ${formatDuration(totalDuration)}`);
+    console.log("-".repeat(35));
+    console.log(`  ${"Total".padEnd(20)} ${formatDuration(totalDuration)}`);
 
-    console.log('\nOutput files:');
-    console.log('  - output/chapters/*.md  (individual chapters)');
-    console.log('  - output/meta.json      (metadata)');
-    console.log('  - output/book.md        (merged document)');
-    console.log('  - output/book.pdf       (final PDF)');
+    console.log("\nOutput files:");
+    console.log("  - output/chapters/*.md  (individual chapters)");
+    console.log("  - output/meta.json      (metadata)");
+    console.log("  - output/book.md        (merged document)");
+    console.log("  - output/book.pdf       (final PDF)");
   } catch (error) {
-    console.error('\nError:', error);
+    console.error("\nError:", error);
     process.exit(1);
   }
 }
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
-  setupSignalHandlers('Pipeline');
+  setupSignalHandlers("Pipeline");
   main();
 }

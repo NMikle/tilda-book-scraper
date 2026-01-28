@@ -47,12 +47,12 @@ export function setupSignalHandlers(commandName: string): void {
 
     // Exit with appropriate code (128 + signal number)
     // SIGINT = 2, SIGTERM = 15
-    const exitCode = signal === 'SIGINT' ? 130 : 143;
+    const exitCode = signal === "SIGINT" ? 130 : 143;
     process.exit(exitCode);
   };
 
-  process.on('SIGINT', () => handler('SIGINT'));
-  process.on('SIGTERM', () => handler('SIGTERM'));
+  process.on("SIGINT", () => handler("SIGINT"));
+  process.on("SIGTERM", () => handler("SIGTERM"));
 }
 
 /**
@@ -68,11 +68,11 @@ export function setupSignalHandlers(commandName: string): void {
  */
 export function globToRegex(pattern: string): RegExp {
   const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // Escape regex special chars (except * and ?)
-    .replace(/\*\*/g, '{{GLOBSTAR}}')       // Temp placeholder for **
-    .replace(/\*/g, '[^/]*')                // * matches anything except /
-    .replace(/\?/g, '[^/]')                 // ? matches single char except /
-    .replace(/\{\{GLOBSTAR\}\}/g, '.*');    // ** matches anything including /
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&") // Escape regex special chars (except * and ?)
+    .replace(/\*\*/g, "{{GLOBSTAR}}") // Temp placeholder for **
+    .replace(/\*/g, "[^/]*") // * matches anything except /
+    .replace(/\?/g, "[^/]") // ? matches single char except /
+    .replace(/\{\{GLOBSTAR\}\}/g, ".*"); // ** matches anything including /
   return new RegExp(`^${escaped}$`);
 }
 
@@ -88,7 +88,7 @@ export function globToRegex(pattern: string): RegExp {
  * // Returns: 'https://static.tildacdn.com/tild1234/photo.jpg'
  */
 export function transformTildaImageUrl(url: string): string {
-  if (url.includes('tildacdn.com') && url.includes('/-/empty/')) {
+  if (url.includes("tildacdn.com") && url.includes("/-/empty/")) {
     const match = url.match(/\/(tild[^/]+)\/-\/empty\/(.+)$/);
     if (match) {
       return `https://static.tildacdn.com/${match[1]}/${match[2]}`;
@@ -110,12 +110,14 @@ export function transformTildaImageUrl(url: string): string {
  * sanitizeFilename('Привет Мир') // 'привет-мир'
  */
 export function sanitizeFilename(title: string): string {
-  return title
-    .toLowerCase()
-    // Keep Latin (a-z), Cyrillic (а-яё), and digits; replace all else with dashes
-    .replace(/[^a-zа-яё0-9]+/gi, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 50);
+  return (
+    title
+      .toLowerCase()
+      // Keep Latin (a-z), Cyrillic (а-яё), and digits; replace all else with dashes
+      .replace(/[^a-zа-яё0-9]+/gi, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 50)
+  );
 }
 
 /**
@@ -147,12 +149,14 @@ export function getBaseUrl(url: string): string {
  * generateAnchor('Скелетные мышцы') // 'скелетные-мышцы'
  */
 export function generateAnchor(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/ /g, '-')                    // Replace spaces with hyphens
-    // Keep Latin (a-z), Cyrillic (а-яё), digits, and hyphens
-    .replace(/[^a-zа-яё0-9-]/gi, '')
-    .replace(/^-+|-+$/g, '');              // Strip leading/trailing hyphens
+  return (
+    title
+      .toLowerCase()
+      .replace(/ /g, "-") // Replace spaces with hyphens
+      // Keep Latin (a-z), Cyrillic (а-яё), digits, and hyphens
+      .replace(/[^a-zа-яё0-9-]/gi, "")
+      .replace(/^-+|-+$/g, "")
+  ); // Strip leading/trailing hyphens
 }
 
 /**
@@ -169,25 +173,21 @@ export function generateAnchor(title: string): string {
  */
 export function deduplicateContentParts(contentParts: string[]): string[] {
   const seen = new Set<string>();
-  return contentParts.filter(part => {
+  return contentParts.filter((part) => {
     const trimmed = part.trim();
     if (!trimmed) return false;
 
     // Create a temporary element to extract content for comparison
     // In browser context, this uses the DOM; in tests, use jsdom
-    const temp = typeof document !== 'undefined'
-      ? document.createElement('div')
-      : createElementFromHTML(trimmed);
+    const temp = typeof document !== "undefined" ? document.createElement("div") : createElementFromHTML(trimmed);
 
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       temp.innerHTML = trimmed;
     }
 
     // For images, use src as the key; for text content, use the text
-    const img = temp.querySelector('img');
-    const textKey = img
-      ? (img.getAttribute('src') || '')
-      : (temp.textContent?.trim() || '');
+    const img = temp.querySelector("img");
+    const textKey = img ? img.getAttribute("src") || "" : temp.textContent?.trim() || "";
 
     if (!textKey || seen.has(textKey)) return false;
     seen.add(textKey);
@@ -202,19 +202,19 @@ export function deduplicateContentParts(contentParts: string[]): string[] {
 function createElementFromHTML(html: string): Element {
   // Minimal parsing for test purposes
   const div = {
-    innerHTML: '',
-    textContent: '',
+    innerHTML: "",
+    textContent: "",
     querySelector: (selector: string) => {
-      if (selector === 'img' && html.includes('<img')) {
+      if (selector === "img" && html.includes("<img")) {
         const srcMatch = html.match(/src="([^"]+)"/);
-        return srcMatch ? { getAttribute: (attr: string) => attr === 'src' ? srcMatch[1] : null } : null;
+        return srcMatch ? { getAttribute: (attr: string) => (attr === "src" ? srcMatch[1] : null) } : null;
       }
       return null;
-    }
+    },
   };
   div.innerHTML = html;
   // Extract text content by stripping HTML tags
-  div.textContent = html.replace(/<[^>]*>/g, '').trim();
+  div.textContent = html.replace(/<[^>]*>/g, "").trim();
   return div as unknown as Element;
 }
 
@@ -229,7 +229,7 @@ function createElementFromHTML(html: string): Element {
  * @returns True if --help or -h is present
  */
 export function hasHelpFlag(args: string[]): boolean {
-  return args.includes('--help') || args.includes('-h');
+  return args.includes("--help") || args.includes("-h");
 }
 
 /**
@@ -244,7 +244,7 @@ export function hasHelpFlag(args: string[]): boolean {
 export function getStringArg(args: string[], flag: string, defaultValue: string): string {
   let result = defaultValue;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith("--")) {
       result = args[i + 1];
     }
   }
@@ -260,7 +260,7 @@ export function getStringArg(args: string[], flag: string, defaultValue: string)
  */
 export function getNullableStringArg(args: string[], flag: string): string | null {
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith("--")) {
       return args[i + 1];
     }
   }
@@ -279,7 +279,7 @@ export function getNumberArg(args: string[], flag: string, defaultValue: number)
   for (let i = 0; i < args.length; i++) {
     if (args[i] === flag && args[i + 1]) {
       const parsed = parseInt(args[i + 1], 10);
-      if (!isNaN(parsed)) {
+      if (!Number.isNaN(parsed)) {
         return parsed;
       }
     }
@@ -297,7 +297,7 @@ export function getNumberArg(args: string[], flag: string, defaultValue: number)
 export function getMultiStringArg(args: string[], flag: string): string[] {
   const values: string[] = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith("--")) {
       values.push(args[i + 1]);
     }
   }
@@ -323,11 +323,11 @@ export function getPositionalArg(args: string[], knownFlags: string[] = []): str
       skipNext = true;
       continue;
     }
-    if (!arg.startsWith('--') && !arg.startsWith('-')) {
+    if (!arg.startsWith("--") && !arg.startsWith("-")) {
       return arg;
     }
   }
-  return '';
+  return "";
 }
 
 // ============================================================================
@@ -346,18 +346,18 @@ export function getPositionalArg(args: string[], knownFlags: string[] = []): str
  * validateUrl('ftp://example.com') // { isValid: false, error: 'URL must use http or https protocol' }
  */
 export function validateUrl(url: string): { isValid: true } | { isValid: false; error: string } {
-  if (!url || typeof url !== 'string') {
-    return { isValid: false, error: 'URL is required' };
+  if (!url || typeof url !== "string") {
+    return { isValid: false, error: "URL is required" };
   }
 
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return { isValid: false, error: 'URL must use http or https protocol' };
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { isValid: false, error: "URL must use http or https protocol" };
     }
     return { isValid: true };
   } catch {
-    return { isValid: false, error: 'Invalid URL format' };
+    return { isValid: false, error: "Invalid URL format" };
   }
 }
 
@@ -379,45 +379,45 @@ export interface MetaValidationResult {
  * validateBookMeta({ startUrl: '...' }) // { isValid: false, error: 'Missing required field: scrapedAt' }
  */
 export function validateBookMeta(data: unknown): MetaValidationResult {
-  if (!data || typeof data !== 'object') {
-    return { isValid: false, error: 'meta.json must be an object' };
+  if (!data || typeof data !== "object") {
+    return { isValid: false, error: "meta.json must be an object" };
   }
 
   const meta = data as Record<string, unknown>;
 
   // Check required top-level fields
-  if (typeof meta.scrapedAt !== 'string') {
-    return { isValid: false, error: 'Missing or invalid field: scrapedAt (expected string)' };
+  if (typeof meta.scrapedAt !== "string") {
+    return { isValid: false, error: "Missing or invalid field: scrapedAt (expected string)" };
   }
 
-  if (typeof meta.startUrl !== 'string') {
-    return { isValid: false, error: 'Missing or invalid field: startUrl (expected string)' };
+  if (typeof meta.startUrl !== "string") {
+    return { isValid: false, error: "Missing or invalid field: startUrl (expected string)" };
   }
 
   if (!Array.isArray(meta.chapters)) {
-    return { isValid: false, error: 'Missing or invalid field: chapters (expected array)' };
+    return { isValid: false, error: "Missing or invalid field: chapters (expected array)" };
   }
 
   // Validate each chapter
   for (let i = 0; i < meta.chapters.length; i++) {
     const chapter = meta.chapters[i] as Record<string, unknown>;
-    if (!chapter || typeof chapter !== 'object') {
+    if (!chapter || typeof chapter !== "object") {
       return { isValid: false, error: `chapters[${i}] must be an object` };
     }
 
-    if (typeof chapter.index !== 'number') {
+    if (typeof chapter.index !== "number") {
       return { isValid: false, error: `chapters[${i}].index must be a number` };
     }
 
-    if (typeof chapter.title !== 'string') {
+    if (typeof chapter.title !== "string") {
       return { isValid: false, error: `chapters[${i}].title must be a string` };
     }
 
-    if (typeof chapter.url !== 'string') {
+    if (typeof chapter.url !== "string") {
       return { isValid: false, error: `chapters[${i}].url must be a string` };
     }
 
-    if (typeof chapter.filename !== 'string') {
+    if (typeof chapter.filename !== "string") {
       return { isValid: false, error: `chapters[${i}].filename must be a string` };
     }
   }

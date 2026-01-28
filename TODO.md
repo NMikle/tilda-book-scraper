@@ -64,7 +64,7 @@ Technical debt and code quality issues identified during code review.
 
 ### Tooling & Configuration
 
-- [ ] **No linting** - Missing ESLint/Biome configuration for consistent code style and catching issues.
+- [x] **No linting** - Missing ESLint/Biome configuration for consistent code style and catching issues.
 - [ ] **No pre-commit hooks** - No husky/lint-staged to enforce tests and linting before commits.
 - [ ] **No CI/CD** - No GitHub Actions to run tests on PRs.
 

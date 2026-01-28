@@ -17,6 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "./scripts/update-coverage.sh",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/",
     "scrape": "tsx src/scrape.ts",
     "merge": "tsx src/merge.ts",
     "pdf": "tsx src/pdf.ts",
@@ -33,6 +36,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
     "@types/node": "^22.10.0",
     "@types/turndown": "^5.0.5",
     "@vitest/coverage-v8": "^4.0.18",

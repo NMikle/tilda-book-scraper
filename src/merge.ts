@@ -4,32 +4,32 @@
  * Usage: npm run merge [-- --name "Book Title"]
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { generateAnchor, setupSignalHandlers, validateBookMeta, hasHelpFlag, getStringArg } from './utils.js';
-import type { ChapterMeta, BookMeta } from './types.js';
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import type { BookMeta, ChapterMeta } from "./types.js";
+import { generateAnchor, getStringArg, hasHelpFlag, setupSignalHandlers, validateBookMeta } from "./utils.js";
 
 // Re-export types for backwards compatibility
-export type { ChapterMeta, BookMeta } from './types.js';
+export type { BookMeta, ChapterMeta } from "./types.js";
 
-const OUTPUT_DIR = 'output';
-const CHAPTERS_DIR = path.join(OUTPUT_DIR, 'chapters');
-const META_FILE = path.join(OUTPUT_DIR, 'meta.json');
-const OUTPUT_FILE = path.join(OUTPUT_DIR, 'book.md');
+const OUTPUT_DIR = "output";
+const CHAPTERS_DIR = path.join(OUTPUT_DIR, "chapters");
+const META_FILE = path.join(OUTPUT_DIR, "meta.json");
+const OUTPUT_FILE = path.join(OUTPUT_DIR, "book.md");
 
 /**
  * Print usage information for the merge command.
  */
 function showUsage(): void {
   console.log('Usage: npm run merge [-- --name "Book Title"]');
-  console.log('');
-  console.log('Merge scraped chapters into a single markdown document with TOC.');
-  console.log('');
-  console.log('Options:');
+  console.log("");
+  console.log("Merge scraped chapters into a single markdown document with TOC.");
+  console.log("");
+  console.log("Options:");
   console.log('  --name <title>       Book title for the document (default: "Book")');
-  console.log('  --help, -h           Show this help message');
-  console.log('');
-  console.log('Example:');
+  console.log("  --help, -h           Show this help message");
+  console.log("");
+  console.log("Example:");
   console.log('  npm run merge -- --name "My Book Title"');
 }
 
@@ -41,7 +41,7 @@ function showUsage(): void {
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): { name: string; showHelp: boolean } {
   return {
-    name: getStringArg(args, '--name', 'Book'),
+    name: getStringArg(args, "--name", "Book"),
     showHelp: hasHelpFlag(args),
   };
 }
@@ -55,7 +55,7 @@ export function parseArgs(args: string[] = process.argv.slice(2)): { name: strin
  * @returns Content with corrected image paths
  */
 export function fixImagePaths(content: string): string {
-  return content.replace(/\.\.\/(images\/)/g, './$1');
+  return content.replace(/\.\.\/(images\/)/g, "./$1");
 }
 
 /**
@@ -93,7 +93,7 @@ export async function main(): Promise<void> {
   }
 
   // Read and validate metadata
-  const metaContent = await fs.readFile(META_FILE, 'utf-8');
+  const metaContent = await fs.readFile(META_FILE, "utf-8");
   const parsedMeta = JSON.parse(metaContent);
 
   const validation = validateBookMeta(parsedMeta);
@@ -105,7 +105,7 @@ export async function main(): Promise<void> {
   const meta = parsedMeta as BookMeta;
 
   if (meta.chapters.length === 0) {
-    console.error('Error: No chapters found in metadata.');
+    console.error("Error: No chapters found in metadata.");
     process.exit(1);
   }
 
@@ -118,32 +118,32 @@ export async function main(): Promise<void> {
   parts.push(`Scraped from: ${meta.startUrl}`);
   parts.push(`Date: ${new Date(meta.scrapedAt).toLocaleDateString()}`);
   parts.push(`Chapters: ${meta.chapters.length}`);
-  parts.push('\n---\n');
+  parts.push("\n---\n");
 
   // Add table of contents
-  parts.push('## Table of Contents\n');
+  parts.push("## Table of Contents\n");
   for (const chapter of meta.chapters) {
     parts.push(generateTocEntry(chapter));
   }
-  parts.push('\n---\n');
+  parts.push("\n---\n");
 
   // Read and concatenate each chapter
   for (const chapter of meta.chapters) {
     const chapterPath = path.join(CHAPTERS_DIR, chapter.filename);
 
     try {
-      const content = await fs.readFile(chapterPath, 'utf-8');
+      const content = await fs.readFile(chapterPath, "utf-8");
       parts.push(fixImagePaths(content));
-      parts.push('\n---\n'); // Page break between chapters
+      parts.push("\n---\n"); // Page break between chapters
       console.log(`  Added: ${chapter.filename}`);
-    } catch (error) {
+    } catch (_error) {
       console.error(`  Warning: Could not read ${chapter.filename}, skipping.`);
     }
   }
 
   // Write merged document
-  const merged = parts.join('\n');
-  await fs.writeFile(OUTPUT_FILE, merged, 'utf-8');
+  const merged = parts.join("\n");
+  await fs.writeFile(OUTPUT_FILE, merged, "utf-8");
 
   const stats = await fs.stat(OUTPUT_FILE);
   const sizeKb = (stats.size / 1024).toFixed(1);
@@ -153,9 +153,9 @@ export async function main(): Promise<void> {
 
 // Only run main when executed directly (not when imported for testing)
 if (import.meta.url === `file://${process.argv[1]}`) {
-  setupSignalHandlers('Merge');
+  setupSignalHandlers("Merge");
   main().catch((error) => {
-    console.error('Error:', error);
+    console.error("Error:", error);
     process.exit(1);
   });
 }
