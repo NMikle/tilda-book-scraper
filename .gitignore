@@ -2,6 +2,7 @@ node_modules/
 dist/
 output/
 coverage/
+.coverage-details.json
 .DS_Store
 .idea/
 

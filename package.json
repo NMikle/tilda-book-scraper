@@ -16,6 +16,7 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "./scripts/update-coverage.sh",
     "scrape": "tsx src/scrape.ts",
     "merge": "tsx src/merge.ts",
     "pdf": "tsx src/pdf.ts",

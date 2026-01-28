@@ -82,20 +82,62 @@ output/        # Generated files (gitignored)
 **Coverage requirements:**
 - New code must have at least 90% test coverage
 - Overall coverage must not drop after changes
-- Run `npm test -- --coverage` to check coverage before committing
-- Update coverage numbers in TODO.md when they change
+
+**Coverage script (ALWAYS use this, never run coverage manually):**
+
+```bash
+npm run test:coverage   # or ./scripts/update-coverage.sh
+```
+
+This script:
+- Runs all tests with coverage
+- Automatically updates TODO.md coverage section (between markers)
+- Generates `.coverage-details.json` for detailed line-level analysis
+
+**IMPORTANT: TODO.md coverage section structure:**
+
+The coverage section in TODO.md uses markers that the script depends on:
+```markdown
+<!-- COVERAGE-START -->
+... auto-generated content ...
+<!-- COVERAGE-END -->
+```
+
+**DO NOT manually edit content between these markers** - it will be overwritten by the script. If you need to change coverage thresholds or formatting, modify `scripts/update-coverage.sh` instead.
+
+**Querying detailed coverage:**
+
+```bash
+# Get uncovered lines for a specific file
+cat .coverage-details.json | node -e "
+  const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+  console.log(d.details['scrape.ts'].uncoveredLines.join(', '));
+"
+
+# Get coverage percentage for a file
+cat .coverage-details.json | node -e "
+  const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+  console.log(d.summary.files['scrape.ts'].lines + '%');
+"
+
+# List all files with coverage
+cat .coverage-details.json | node -e "
+  const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8'));
+  Object.entries(d.summary.files).forEach(([f,v]) => console.log(f + ': ' + Math.round(v.lines) + '%'));
+"
+```
 
 **Pre-commit coverage checklist (MANDATORY):**
 
-Before EVERY commit, you MUST:
+Before EVERY commit that modifies source code, you MUST:
 
-1. Run `npm test -- --coverage`
-2. Check coverage for ALL modified source files (not just test files)
-3. Verify that new and changed lines have at least 90% coverage
-4. If coverage is below 90% for new/changed code:
-   - Write additional tests to cover the gaps
-   - Run coverage again
-   - Repeat until 90%+ coverage is achieved
+1. Run `npm run test:coverage`
+2. Check which lines are uncovered in modified files
+3. Verify new/changed lines have at least 90% coverage
+4. If coverage is below 90%:
+   - Write additional tests for uncovered lines
+   - Run `npm run test:coverage` again
+   - **Repeat until 90%+ coverage is achieved**
 5. Only then proceed with the commit
 
 This is non-negotiable. Do not skip this step.
