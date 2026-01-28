@@ -62,10 +62,6 @@ Technical debt and code quality issues identified during code review.
 - [ ] **No configuration file support** - All options must be passed via CLI. Support optional `.tildascraperrc.json` for repeated use.
 - [ ] **No dry-run mode** - Can't preview what would be scraped without actually scraping.
 
-### Tooling & Configuration
-
-- [ ] **No CI/CD** - No GitHub Actions to run tests on PRs.
-
 ### Documentation
 
 - [ ] **No troubleshooting guide** - Missing docs for common issues: "no content found", "images not downloading", platform-specific problems.
@@ -100,3 +96,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Replace global imageCounter with parameter injection (`ImageStats`)
 - [x] Add Biome linter for consistent code style and catching issues
 - [x] Add pre-commit hooks with husky/lint-staged
+- [x] Add GitHub Actions CI to run tests and linting on PRs
