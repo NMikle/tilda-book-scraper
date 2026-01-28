@@ -16,7 +16,7 @@ import TurndownService from 'turndown';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt } from './utils.js';
+import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt, validateUrl } from './utils.js';
 import type { ChapterMeta, BookMeta } from './types.js';
 
 const OUTPUT_DIR = 'output';
@@ -486,6 +486,13 @@ export async function main(): Promise<void> {
 
   if (!startUrl) {
     showUsage();
+    process.exit(1);
+  }
+
+  // Validate URL format before attempting to scrape
+  const urlValidation = validateUrl(startUrl);
+  if (!urlValidation.isValid) {
+    console.error(`Error: ${urlValidation.error}`);
     process.exit(1);
   }
 

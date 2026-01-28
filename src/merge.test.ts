@@ -216,6 +216,58 @@ describe('main', () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
+  it('exits with error when meta.json is missing scrapedAt field', async () => {
+    const { main } = await import('./merge.js');
+
+    const invalidMeta = { startUrl: 'https://example.com', chapters: [] };
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidMeta));
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid output/meta.json: Missing or invalid field: scrapedAt')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('exits with error when meta.json is missing startUrl field', async () => {
+    const { main } = await import('./merge.js');
+
+    const invalidMeta = { scrapedAt: '2024-01-01', chapters: [] };
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidMeta));
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid output/meta.json: Missing or invalid field: startUrl')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('exits with error when chapter is missing required fields', async () => {
+    const { main } = await import('./merge.js');
+
+    const invalidMeta = {
+      scrapedAt: '2024-01-01',
+      startUrl: 'https://example.com',
+      chapters: [{ index: 0, title: 'Chapter 1' }], // missing url and filename
+    };
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(invalidMeta));
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid output/meta.json: chapters[0].url must be a string')
+    );
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
   it('skips missing chapter files with warning', async () => {
     const { main } = await import('./merge.js');
 

@@ -6,6 +6,8 @@ import {
   getBaseUrl,
   generateAnchor,
   deduplicateContentParts,
+  validateUrl,
+  validateBookMeta,
 } from './utils.js';
 
 describe('globToRegex', () => {
@@ -265,5 +267,142 @@ describe('onInterrupt', () => {
   it('is exported from utils', async () => {
     const utils = await import('./utils.js');
     expect(typeof utils.onInterrupt).toBe('function');
+  });
+});
+
+describe('validateUrl', () => {
+  it('accepts valid http URLs', () => {
+    expect(validateUrl('http://example.com')).toEqual({ isValid: true });
+    expect(validateUrl('http://example.com/path')).toEqual({ isValid: true });
+    expect(validateUrl('http://example.com:8080/path')).toEqual({ isValid: true });
+  });
+
+  it('accepts valid https URLs', () => {
+    expect(validateUrl('https://example.com')).toEqual({ isValid: true });
+    expect(validateUrl('https://example.com/path/to/page')).toEqual({ isValid: true });
+    expect(validateUrl('https://sub.example.com')).toEqual({ isValid: true });
+  });
+
+  it('rejects empty or missing URLs', () => {
+    expect(validateUrl('')).toEqual({ isValid: false, error: 'URL is required' });
+    expect(validateUrl(null as unknown as string)).toEqual({ isValid: false, error: 'URL is required' });
+    expect(validateUrl(undefined as unknown as string)).toEqual({ isValid: false, error: 'URL is required' });
+  });
+
+  it('rejects invalid URL format', () => {
+    expect(validateUrl('not-a-url')).toEqual({ isValid: false, error: 'Invalid URL format' });
+    expect(validateUrl('example.com')).toEqual({ isValid: false, error: 'Invalid URL format' });
+    expect(validateUrl('://missing-protocol.com')).toEqual({ isValid: false, error: 'Invalid URL format' });
+  });
+
+  it('rejects non-http/https protocols', () => {
+    expect(validateUrl('ftp://example.com')).toEqual({ isValid: false, error: 'URL must use http or https protocol' });
+    expect(validateUrl('file:///path/to/file')).toEqual({ isValid: false, error: 'URL must use http or https protocol' });
+    expect(validateUrl('mailto:test@example.com')).toEqual({ isValid: false, error: 'URL must use http or https protocol' });
+  });
+});
+
+describe('validateBookMeta', () => {
+  const validMeta = {
+    scrapedAt: '2024-01-01T00:00:00.000Z',
+    startUrl: 'https://example.com/book',
+    chapters: [
+      { index: 0, title: 'Chapter 1', url: 'https://example.com/ch1', filename: '001-chapter-1.md' },
+      { index: 1, title: 'Chapter 2', url: 'https://example.com/ch2', filename: '002-chapter-2.md' },
+    ],
+  };
+
+  it('accepts valid meta.json structure', () => {
+    expect(validateBookMeta(validMeta)).toEqual({ isValid: true });
+  });
+
+  it('accepts meta with empty chapters array', () => {
+    const meta = { ...validMeta, chapters: [] };
+    expect(validateBookMeta(meta)).toEqual({ isValid: true });
+  });
+
+  it('rejects null or non-object', () => {
+    expect(validateBookMeta(null)).toEqual({ isValid: false, error: 'meta.json must be an object' });
+    expect(validateBookMeta(undefined)).toEqual({ isValid: false, error: 'meta.json must be an object' });
+    expect(validateBookMeta('string')).toEqual({ isValid: false, error: 'meta.json must be an object' });
+    expect(validateBookMeta(123)).toEqual({ isValid: false, error: 'meta.json must be an object' });
+  });
+
+  it('rejects missing scrapedAt', () => {
+    const meta = { startUrl: 'https://example.com', chapters: [] };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'Missing or invalid field: scrapedAt (expected string)' });
+  });
+
+  it('rejects invalid scrapedAt type', () => {
+    const meta = { ...validMeta, scrapedAt: 123 };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'Missing or invalid field: scrapedAt (expected string)' });
+  });
+
+  it('rejects missing startUrl', () => {
+    const meta = { scrapedAt: '2024-01-01', chapters: [] };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'Missing or invalid field: startUrl (expected string)' });
+  });
+
+  it('rejects missing chapters array', () => {
+    const meta = { scrapedAt: '2024-01-01', startUrl: 'https://example.com' };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'Missing or invalid field: chapters (expected array)' });
+  });
+
+  it('rejects chapters that is not an array', () => {
+    const meta = { scrapedAt: '2024-01-01', startUrl: 'https://example.com', chapters: 'not-array' };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'Missing or invalid field: chapters (expected array)' });
+  });
+
+  it('rejects chapter that is not an object', () => {
+    const meta = { scrapedAt: '2024-01-01', startUrl: 'https://example.com', chapters: [null] };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0] must be an object' });
+  });
+
+  it('rejects chapter that is a primitive value', () => {
+    const meta = { scrapedAt: '2024-01-01', startUrl: 'https://example.com', chapters: ['string-chapter'] };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0] must be an object' });
+  });
+
+  it('rejects chapter with missing index', () => {
+    const meta = {
+      ...validMeta,
+      chapters: [{ title: 'Ch1', url: 'https://example.com', filename: '001.md' }],
+    };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0].index must be a number' });
+  });
+
+  it('rejects chapter with missing title', () => {
+    const meta = {
+      ...validMeta,
+      chapters: [{ index: 0, url: 'https://example.com', filename: '001.md' }],
+    };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0].title must be a string' });
+  });
+
+  it('rejects chapter with missing url', () => {
+    const meta = {
+      ...validMeta,
+      chapters: [{ index: 0, title: 'Ch1', filename: '001.md' }],
+    };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0].url must be a string' });
+  });
+
+  it('rejects chapter with missing filename', () => {
+    const meta = {
+      ...validMeta,
+      chapters: [{ index: 0, title: 'Ch1', url: 'https://example.com' }],
+    };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[0].filename must be a string' });
+  });
+
+  it('reports correct index for invalid chapter', () => {
+    const meta = {
+      ...validMeta,
+      chapters: [
+        { index: 0, title: 'Ch1', url: 'https://example.com', filename: '001.md' },
+        { index: 1, title: 'Ch2', url: 'https://example.com' }, // missing filename
+      ],
+    };
+    expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[1].filename must be a string' });
   });
 });

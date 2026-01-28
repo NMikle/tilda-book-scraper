@@ -4,14 +4,14 @@ Project roadmap and planned improvements.
 
 ## High Priority
 
-- [ ] **Increase test coverage to 90%+** - Overall: 70%
+- [ ] **Increase test coverage to 90%+** - Overall: 71%
 
 | File | Coverage | Status |
 |------|----------|--------|
 | index.ts | 98% | :green_circle: |
-| merge.ts | 94% | :green_circle: |
+| merge.ts | 95% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
-| utils.ts | 71% | :yellow_circle: (signal handlers hard to test) |
+| utils.ts | 84% | :yellow_circle: (signal handlers hard to test) |
 | scrape.ts | 53% | :yellow_circle: (browser-context code limits this) |
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
@@ -50,9 +50,7 @@ Technical debt and code quality issues identified during code review.
 
 ### Input Validation & Security
 
-- [ ] **No URL validation** (`scrape.ts:421`) - Start URL passed directly to `page.goto()` without format validation. Use `URL()` constructor to validate.
 - [ ] **Unsafe URL concatenation** (`scrape.ts:289-293`) - Manual string concatenation for URL joining. Use `new URL(href, baseUrl)` instead.
-- [ ] **No meta.json schema validation** (`merge.ts:100`) - Parses JSON without validating structure. Could fail silently with malformed data.
 - [ ] **No rate limiting / backoff** - No exponential backoff for failed requests. Could hammer servers on transient failures.
 
 ### Testing
@@ -63,7 +61,6 @@ Technical debt and code quality issues identified during code review.
 
 - [ ] **No configuration file support** - All options must be passed via CLI. Support optional `.tildascraperrc.json` for repeated use.
 - [ ] **No dry-run mode** - Can't preview what would be scraped without actually scraping.
-- [ ] **Build doesn't run tests** (`package.json`) - `npm run build` only runs `tsc`. Should run tests first.
 
 ### Tooling & Configuration
 
@@ -99,3 +96,5 @@ Technical debt and code quality issues identified during code review.
 - [x] Extract magic numbers to named constants (`TILDA_SKIP_BLOCK_TYPES`)
 - [x] Extract hardcoded values to constants (`DEFAULT_USER_AGENT`, `TOC_LINK_THRESHOLD`)
 - [x] Enable stricter TypeScript options (`noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`)
+- [x] Add URL validation before `page.goto()` in scrape.ts
+- [x] Add meta.json schema validation in merge.ts

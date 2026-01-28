@@ -215,3 +215,94 @@ function createElementFromHTML(html: string): Element {
   div.textContent = html.replace(/<[^>]*>/g, '').trim();
   return div as unknown as Element;
 }
+
+/**
+ * Validate that a string is a valid HTTP/HTTPS URL.
+ *
+ * @param url - URL string to validate
+ * @returns Object with isValid boolean and error message if invalid
+ *
+ * @example
+ * validateUrl('https://example.com') // { isValid: true }
+ * validateUrl('not-a-url') // { isValid: false, error: 'Invalid URL format' }
+ * validateUrl('ftp://example.com') // { isValid: false, error: 'URL must use http or https protocol' }
+ */
+export function validateUrl(url: string): { isValid: true } | { isValid: false; error: string } {
+  if (!url || typeof url !== 'string') {
+    return { isValid: false, error: 'URL is required' };
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { isValid: false, error: 'URL must use http or https protocol' };
+    }
+    return { isValid: true };
+  } catch {
+    return { isValid: false, error: 'Invalid URL format' };
+  }
+}
+
+/** Result of meta.json validation */
+export interface MetaValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Validate the structure of meta.json content.
+ * Checks that all required fields exist and have correct types.
+ *
+ * @param data - Parsed JSON data to validate
+ * @returns Object with isValid boolean and error message if invalid
+ *
+ * @example
+ * validateBookMeta({ scrapedAt: '...', startUrl: '...', chapters: [] }) // { isValid: true }
+ * validateBookMeta({ startUrl: '...' }) // { isValid: false, error: 'Missing required field: scrapedAt' }
+ */
+export function validateBookMeta(data: unknown): MetaValidationResult {
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, error: 'meta.json must be an object' };
+  }
+
+  const meta = data as Record<string, unknown>;
+
+  // Check required top-level fields
+  if (typeof meta.scrapedAt !== 'string') {
+    return { isValid: false, error: 'Missing or invalid field: scrapedAt (expected string)' };
+  }
+
+  if (typeof meta.startUrl !== 'string') {
+    return { isValid: false, error: 'Missing or invalid field: startUrl (expected string)' };
+  }
+
+  if (!Array.isArray(meta.chapters)) {
+    return { isValid: false, error: 'Missing or invalid field: chapters (expected array)' };
+  }
+
+  // Validate each chapter
+  for (let i = 0; i < meta.chapters.length; i++) {
+    const chapter = meta.chapters[i] as Record<string, unknown>;
+    if (!chapter || typeof chapter !== 'object') {
+      return { isValid: false, error: `chapters[${i}] must be an object` };
+    }
+
+    if (typeof chapter.index !== 'number') {
+      return { isValid: false, error: `chapters[${i}].index must be a number` };
+    }
+
+    if (typeof chapter.title !== 'string') {
+      return { isValid: false, error: `chapters[${i}].title must be a string` };
+    }
+
+    if (typeof chapter.url !== 'string') {
+      return { isValid: false, error: `chapters[${i}].url must be a string` };
+    }
+
+    if (typeof chapter.filename !== 'string') {
+      return { isValid: false, error: `chapters[${i}].filename must be a string` };
+    }
+  }
+
+  return { isValid: true };
+}

@@ -6,7 +6,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { generateAnchor, setupSignalHandlers } from './utils.js';
+import { generateAnchor, setupSignalHandlers, validateBookMeta } from './utils.js';
 import type { ChapterMeta, BookMeta } from './types.js';
 
 // Re-export types for backwards compatibility
@@ -101,9 +101,17 @@ export async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Read metadata
+  // Read and validate metadata
   const metaContent = await fs.readFile(META_FILE, 'utf-8');
-  const meta: BookMeta = JSON.parse(metaContent);
+  const parsedMeta = JSON.parse(metaContent);
+
+  const validation = validateBookMeta(parsedMeta);
+  if (!validation.isValid) {
+    console.error(`Error: Invalid ${META_FILE}: ${validation.error}`);
+    process.exit(1);
+  }
+
+  const meta = parsedMeta as BookMeta;
 
   if (meta.chapters.length === 0) {
     console.error('Error: No chapters found in metadata.');

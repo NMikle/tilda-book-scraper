@@ -431,6 +431,32 @@ describe('main', () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
+  it('exits with error when URL format is invalid', async () => {
+    process.argv = ['node', 'scrape.ts', 'not-a-valid-url'];
+
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    const { main } = await import('./scrape.js');
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith('Error: Invalid URL format');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('exits with error when URL uses non-http protocol', async () => {
+    process.argv = ['node', 'scrape.ts', 'ftp://example.com/book'];
+
+    mockExit.mockImplementation(() => { throw new Error('process.exit called'); });
+
+    const { main } = await import('./scrape.js');
+
+    await expect(main()).rejects.toThrow('process.exit called');
+
+    expect(mockConsoleError).toHaveBeenCalledWith('Error: URL must use http or https protocol');
+    expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
   it('creates output directories', async () => {
     process.argv = ['node', 'scrape.ts', 'https://example.com/book'];
 
