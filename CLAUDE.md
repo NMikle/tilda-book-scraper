@@ -85,6 +85,21 @@ output/        # Generated files (gitignored)
 - Run `npm test -- --coverage` to check coverage before committing
 - Update coverage numbers in TODO.md when they change
 
+**Pre-commit coverage checklist (MANDATORY):**
+
+Before EVERY commit, you MUST:
+
+1. Run `npm test -- --coverage`
+2. Check coverage for ALL modified source files (not just test files)
+3. Verify that new and changed lines have at least 90% coverage
+4. If coverage is below 90% for new/changed code:
+   - Write additional tests to cover the gaps
+   - Run coverage again
+   - Repeat until 90%+ coverage is achieved
+5. Only then proceed with the commit
+
+This is non-negotiable. Do not skip this step.
+
 **What to mock:**
 ```typescript
 vi.mock('puppeteer', () => ({ default: { launch: vi.fn() } }));
