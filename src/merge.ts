@@ -6,7 +6,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { generateAnchor, setupSignalHandlers, validateBookMeta } from './utils.js';
+import { generateAnchor, setupSignalHandlers, validateBookMeta, hasHelpFlag, getStringArg } from './utils.js';
 import type { ChapterMeta, BookMeta } from './types.js';
 
 // Re-export types for backwards compatibility
@@ -40,19 +40,10 @@ function showUsage(): void {
  * @returns Parsed options with book name and help flag
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): { name: string; showHelp: boolean } {
-  let name = 'Book';
-  let showHelp = false;
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--help' || args[i] === '-h') {
-      showHelp = true;
-    } else if (args[i] === '--name' && args[i + 1]) {
-      name = args[i + 1];
-      i++;
-    }
-  }
-
-  return { name, showHelp };
+  return {
+    name: getStringArg(args, '--name', 'Book'),
+    showHelp: hasHelpFlag(args),
+  };
 }
 
 /**

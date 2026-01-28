@@ -8,7 +8,7 @@ import { mdToPdf } from 'md-to-pdf';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { setupSignalHandlers } from './utils.js';
+import { setupSignalHandlers, hasHelpFlag } from './utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,8 +38,7 @@ function showUsage(): void {
  * @returns Parsed options with help flag
  */
 export function parseArgs(args: string[] = process.argv.slice(2)): { showHelp: boolean } {
-  const showHelp = args.includes('--help') || args.includes('-h');
-  return { showHelp };
+  return { showHelp: hasHelpFlag(args) };
 }
 
 /**

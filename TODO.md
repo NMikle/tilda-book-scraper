@@ -11,7 +11,7 @@ Project roadmap and planned improvements.
 | index.ts | 98% | :green_circle: |
 | merge.ts | 95% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
-| utils.ts | 84% | :yellow_circle: (signal handlers hard to test) |
+| utils.ts | 89% | :yellow_circle: (signal handlers hard to test) |
 | scrape.ts | 53% | :yellow_circle: (browser-context code limits this) |
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
@@ -45,7 +45,6 @@ Technical debt and code quality issues identified during code review.
 ### Architecture & Design
 
 - [ ] **Global mutable state** (`scrape.ts:29`) - `imageCounter` is module-level mutable state. Causes potential race conditions with parallel downloads and test isolation issues. Use parameter injection or UUIDs instead.
-- [ ] **Duplicate argument parsing** (`scrape.ts`, `index.ts`) - Both files implement similar `parseArgs()` functions. Extract to shared utility.
 - [ ] **Mixed concerns in scrape.ts** - Single file handles CLI parsing, browser lifecycle, DOM extraction, image processing, and file I/O. Consider splitting into smaller modules.
 
 ### Input Validation & Security
@@ -98,3 +97,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Enable stricter TypeScript options (`noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`)
 - [x] Add URL validation before `page.goto()` in scrape.ts
 - [x] Add meta.json schema validation in merge.ts
+- [x] Extract shared argument parsing utilities to utils.ts

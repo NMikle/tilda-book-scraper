@@ -5,7 +5,7 @@
  */
 
 import { execSync } from 'child_process';
-import { setupSignalHandlers } from './utils.js';
+import { setupSignalHandlers, hasHelpFlag, getStringArg, getNumberArg, getMultiStringArg, getNullableStringArg, getPositionalArg } from './utils.js';
 
 /**
  * Format duration in milliseconds to human-readable string.
@@ -76,39 +76,19 @@ function showUsage(): void {
  * @param args - Command line arguments (defaults to process.argv)
  * @returns Parsed pipeline options
  */
+/** Flags that take values, used for positional argument detection */
+const PIPELINE_VALUE_FLAGS = ['--name', '--wait', '--delay', '--skip', '--url-pattern'];
+
 export function parseArgs(args: string[] = process.argv.slice(2)): PipelineOptions {
-  let startUrl = '';
-  let name = 'Book';
-  let wait = 1000;
-  let delay = 1000;
-  const skipUrls: string[] = [];
-  let urlPattern: string | null = null;
-  let showHelp = false;
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--help' || args[i] === '-h') {
-      showHelp = true;
-    } else if (args[i] === '--name' && args[i + 1]) {
-      name = args[i + 1];
-      i++;
-    } else if (args[i] === '--wait' && args[i + 1]) {
-      wait = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === '--delay' && args[i + 1]) {
-      delay = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === '--skip' && args[i + 1]) {
-      skipUrls.push(args[i + 1]);
-      i++;
-    } else if (args[i] === '--url-pattern' && args[i + 1]) {
-      urlPattern = args[i + 1];
-      i++;
-    } else if (!args[i].startsWith('--')) {
-      startUrl = args[i];
-    }
-  }
-
-  return { startUrl, name, wait, delay, skipUrls, urlPattern, showHelp };
+  return {
+    startUrl: getPositionalArg(args, PIPELINE_VALUE_FLAGS),
+    name: getStringArg(args, '--name', 'Book'),
+    wait: getNumberArg(args, '--wait', 1000),
+    delay: getNumberArg(args, '--delay', 1000),
+    skipUrls: getMultiStringArg(args, '--skip'),
+    urlPattern: getNullableStringArg(args, '--url-pattern'),
+    showHelp: hasHelpFlag(args),
+  };
 }
 
 /**

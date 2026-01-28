@@ -16,7 +16,7 @@ import TurndownService from 'turndown';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt, validateUrl } from './utils.js';
+import { globToRegex, transformTildaImageUrl, sanitizeFilename, getBaseUrl, setupSignalHandlers, onInterrupt, validateUrl, hasHelpFlag, getNumberArg, getMultiStringArg, getNullableStringArg, getPositionalArg } from './utils.js';
 import type { ChapterMeta, BookMeta } from './types.js';
 
 const OUTPUT_DIR = 'output';
@@ -106,35 +106,18 @@ function showUsage(): void {
  * @param args - Command line arguments (defaults to process.argv)
  * @returns Parsed scraper options
  */
+/** Flags that take values, used for positional argument detection */
+const SCRAPER_VALUE_FLAGS = ['--wait', '--delay', '--skip', '--url-pattern'];
+
 export function parseArgs(args: string[] = process.argv.slice(2)): ScraperOptions {
-  let startUrl = '';
-  let pageWait = DEFAULT_PAGE_WAIT;
-  let chapterDelay = DEFAULT_CHAPTER_DELAY;
-  const skipUrls: string[] = [];
-  let urlPattern: string | null = null;
-  let showHelp = false;
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--help' || args[i] === '-h') {
-      showHelp = true;
-    } else if (args[i] === '--wait' && args[i + 1]) {
-      pageWait = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === '--delay' && args[i + 1]) {
-      chapterDelay = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === '--skip' && args[i + 1]) {
-      skipUrls.push(args[i + 1]);
-      i++;
-    } else if (args[i] === '--url-pattern' && args[i + 1]) {
-      urlPattern = args[i + 1];
-      i++;
-    } else if (!args[i].startsWith('--')) {
-      startUrl = args[i];
-    }
-  }
-
-  return { startUrl, pageWait, chapterDelay, skipUrls, urlPattern, showHelp };
+  return {
+    startUrl: getPositionalArg(args, SCRAPER_VALUE_FLAGS),
+    pageWait: getNumberArg(args, '--wait', DEFAULT_PAGE_WAIT),
+    chapterDelay: getNumberArg(args, '--delay', DEFAULT_CHAPTER_DELAY),
+    skipUrls: getMultiStringArg(args, '--skip'),
+    urlPattern: getNullableStringArg(args, '--url-pattern'),
+    showHelp: hasHelpFlag(args),
+  };
 }
 
 const turndown = new TurndownService({

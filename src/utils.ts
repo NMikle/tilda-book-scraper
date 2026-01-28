@@ -216,6 +216,122 @@ function createElementFromHTML(html: string): Element {
   return div as unknown as Element;
 }
 
+// ============================================================================
+// Argument Parsing Helpers
+// ============================================================================
+
+/**
+ * Check if help flag is present in arguments.
+ *
+ * @param args - Command line arguments array
+ * @returns True if --help or -h is present
+ */
+export function hasHelpFlag(args: string[]): boolean {
+  return args.includes('--help') || args.includes('-h');
+}
+
+/**
+ * Get a string argument value from command line arguments.
+ * If the flag appears multiple times, returns the last value.
+ *
+ * @param args - Command line arguments array
+ * @param flag - Flag to look for (e.g., '--name')
+ * @param defaultValue - Default value if flag not found
+ * @returns The argument value or default
+ */
+export function getStringArg(args: string[], flag: string, defaultValue: string): string {
+  let result = defaultValue;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+      result = args[i + 1];
+    }
+  }
+  return result;
+}
+
+/**
+ * Get a nullable string argument value from command line arguments.
+ *
+ * @param args - Command line arguments array
+ * @param flag - Flag to look for (e.g., '--url-pattern')
+ * @returns The argument value or null if not found
+ */
+export function getNullableStringArg(args: string[], flag: string): string | null {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+      return args[i + 1];
+    }
+  }
+  return null;
+}
+
+/**
+ * Get a number argument value from command line arguments.
+ *
+ * @param args - Command line arguments array
+ * @param flag - Flag to look for (e.g., '--wait')
+ * @param defaultValue - Default value if flag not found
+ * @returns The parsed number or default
+ */
+export function getNumberArg(args: string[], flag: string, defaultValue: number): number {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === flag && args[i + 1]) {
+      const parsed = parseInt(args[i + 1], 10);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return defaultValue;
+}
+
+/**
+ * Get all values for a repeatable string argument.
+ *
+ * @param args - Command line arguments array
+ * @param flag - Flag to look for (e.g., '--skip')
+ * @returns Array of all values for the flag
+ */
+export function getMultiStringArg(args: string[], flag: string): string[] {
+  const values: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) {
+      values.push(args[i + 1]);
+    }
+  }
+  return values;
+}
+
+/**
+ * Get the first positional (non-flag) argument.
+ * Skips values that follow flags (e.g., in '--wait 1000', skips '1000').
+ *
+ * @param args - Command line arguments array
+ * @param knownFlags - Flags that take values (to skip their values)
+ * @returns The first non-flag argument or empty string
+ */
+export function getPositionalArg(args: string[], knownFlags: string[] = []): string {
+  let skipNext = false;
+  for (const arg of args) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+    if (knownFlags.includes(arg)) {
+      skipNext = true;
+      continue;
+    }
+    if (!arg.startsWith('--') && !arg.startsWith('-')) {
+      return arg;
+    }
+  }
+  return '';
+}
+
+// ============================================================================
+// Validation Helpers
+// ============================================================================
+
 /**
  * Validate that a string is a valid HTTP/HTTPS URL.
  *

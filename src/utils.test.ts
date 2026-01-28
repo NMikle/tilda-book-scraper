@@ -8,6 +8,12 @@ import {
   deduplicateContentParts,
   validateUrl,
   validateBookMeta,
+  hasHelpFlag,
+  getStringArg,
+  getNullableStringArg,
+  getNumberArg,
+  getMultiStringArg,
+  getPositionalArg,
 } from './utils.js';
 
 describe('globToRegex', () => {
@@ -404,5 +410,137 @@ describe('validateBookMeta', () => {
       ],
     };
     expect(validateBookMeta(meta)).toEqual({ isValid: false, error: 'chapters[1].filename must be a string' });
+  });
+});
+
+describe('hasHelpFlag', () => {
+  it('returns true for --help', () => {
+    expect(hasHelpFlag(['--help'])).toBe(true);
+    expect(hasHelpFlag(['arg', '--help'])).toBe(true);
+  });
+
+  it('returns true for -h', () => {
+    expect(hasHelpFlag(['-h'])).toBe(true);
+    expect(hasHelpFlag(['arg', '-h', 'other'])).toBe(true);
+  });
+
+  it('returns false when no help flag present', () => {
+    expect(hasHelpFlag([])).toBe(false);
+    expect(hasHelpFlag(['--name', 'value'])).toBe(false);
+  });
+});
+
+describe('getStringArg', () => {
+  it('returns value when flag is present', () => {
+    expect(getStringArg(['--name', 'MyBook'], '--name', 'default')).toBe('MyBook');
+  });
+
+  it('returns default when flag is missing', () => {
+    expect(getStringArg(['--other', 'value'], '--name', 'default')).toBe('default');
+  });
+
+  it('returns default when flag has no value', () => {
+    expect(getStringArg(['--name'], '--name', 'default')).toBe('default');
+  });
+
+  it('returns default when value looks like a flag', () => {
+    expect(getStringArg(['--name', '--other'], '--name', 'default')).toBe('default');
+  });
+
+  it('handles flag in middle of args', () => {
+    expect(getStringArg(['url', '--name', 'Book', '--wait', '1000'], '--name', 'default')).toBe('Book');
+  });
+
+  it('returns last value when flag appears multiple times', () => {
+    expect(getStringArg(['--name', 'First', '--name', 'Second'], '--name', 'default')).toBe('Second');
+  });
+});
+
+describe('getNullableStringArg', () => {
+  it('returns value when flag is present', () => {
+    expect(getNullableStringArg(['--pattern', '*.html'], '--pattern')).toBe('*.html');
+  });
+
+  it('returns null when flag is missing', () => {
+    expect(getNullableStringArg(['--other', 'value'], '--pattern')).toBeNull();
+  });
+
+  it('returns null when flag has no value', () => {
+    expect(getNullableStringArg(['--pattern'], '--pattern')).toBeNull();
+  });
+});
+
+describe('getNumberArg', () => {
+  it('returns parsed number when flag is present', () => {
+    expect(getNumberArg(['--wait', '2000'], '--wait', 1000)).toBe(2000);
+  });
+
+  it('returns default when flag is missing', () => {
+    expect(getNumberArg(['--other', '500'], '--wait', 1000)).toBe(1000);
+  });
+
+  it('returns default when value is not a number', () => {
+    expect(getNumberArg(['--wait', 'abc'], '--wait', 1000)).toBe(1000);
+  });
+
+  it('returns default when flag has no value', () => {
+    expect(getNumberArg(['--wait'], '--wait', 1000)).toBe(1000);
+  });
+
+  it('handles zero as valid value', () => {
+    expect(getNumberArg(['--wait', '0'], '--wait', 1000)).toBe(0);
+  });
+});
+
+describe('getMultiStringArg', () => {
+  it('returns empty array when flag is missing', () => {
+    expect(getMultiStringArg(['--other', 'value'], '--skip')).toEqual([]);
+  });
+
+  it('returns single value', () => {
+    expect(getMultiStringArg(['--skip', 'url1'], '--skip')).toEqual(['url1']);
+  });
+
+  it('returns multiple values', () => {
+    expect(getMultiStringArg(['--skip', 'url1', '--skip', 'url2'], '--skip')).toEqual(['url1', 'url2']);
+  });
+
+  it('ignores flags without values', () => {
+    expect(getMultiStringArg(['--skip', '--other'], '--skip')).toEqual([]);
+  });
+
+  it('handles mixed args', () => {
+    expect(getMultiStringArg(['url', '--skip', 'a', '--wait', '1000', '--skip', 'b'], '--skip')).toEqual(['a', 'b']);
+  });
+});
+
+describe('getPositionalArg', () => {
+  it('returns first non-flag argument', () => {
+    expect(getPositionalArg(['https://example.com'])).toBe('https://example.com');
+  });
+
+  it('returns empty string when no positional arg', () => {
+    expect(getPositionalArg(['--help'])).toBe('');
+    expect(getPositionalArg([])).toBe('');
+  });
+
+  it('skips values of known flags', () => {
+    expect(getPositionalArg(['--wait', '1000', 'https://example.com'], ['--wait'])).toBe('https://example.com');
+  });
+
+  it('skips multiple known flag values', () => {
+    expect(getPositionalArg(['--wait', '1000', '--delay', '500', 'https://example.com'], ['--wait', '--delay'])).toBe('https://example.com');
+  });
+
+  it('returns first positional even if not URL', () => {
+    expect(getPositionalArg(['positional', '--flag'])).toBe('positional');
+  });
+
+  it('skips short flags', () => {
+    expect(getPositionalArg(['-h', 'positional'])).toBe('positional');
+  });
+
+  it('handles positional before flags', () => {
+    expect(getPositionalArg(['https://example.com', '--wait', '1000'], ['--wait'])).toBe('https://example.com');
   });
 });
