@@ -374,7 +374,7 @@ describe("saveImage", () => {
       flatten: vi.fn().mockReturnThis(),
       jpeg: vi.fn().mockReturnThis(),
       toFile: vi.fn().mockRejectedValueOnce(new Error("Sharp error")),
-    } as any);
+    } as ReturnType<typeof sharp>);
 
     const imageBuffer = Buffer.from("corrupted-image-data");
 
@@ -385,20 +385,32 @@ describe("saveImage", () => {
   });
 });
 
+interface MockPage {
+  setUserAgent: ReturnType<typeof vi.fn>;
+  setViewport: ReturnType<typeof vi.fn>;
+  goto: ReturnType<typeof vi.fn>;
+  evaluate: ReturnType<typeof vi.fn>;
+}
+
+interface MockBrowser {
+  newPage: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
+}
+
 describe("main", () => {
   let mockExit: ReturnType<typeof vi.spyOn>;
   let mockConsoleLog: ReturnType<typeof vi.spyOn>;
   let mockConsoleError: ReturnType<typeof vi.spyOn>;
-  let mockPage: any;
-  let mockBrowser: any;
+  let mockPage: MockPage;
+  let mockBrowser: MockBrowser;
   let originalArgv: string[];
 
   beforeEach(() => {
     vi.clearAllMocks();
     originalArgv = process.argv;
     mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     // Create mock page
     mockPage = {
@@ -414,7 +426,9 @@ describe("main", () => {
       close: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(puppeteer.launch).mockResolvedValue(mockBrowser as any);
+    vi.mocked(puppeteer.launch).mockResolvedValue(
+      mockBrowser as unknown as Awaited<ReturnType<typeof puppeteer.launch>>,
+    );
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
   });
@@ -601,7 +615,8 @@ describe("main", () => {
       .mocked(fs.writeFile)
       .mock.calls.find((call) => typeof call[0] === "string" && call[0].includes("chapters"));
     expect(writeCall).toBeDefined();
-    const filename = (writeCall?.[0] as string).split("/").pop()!;
+    const filePath = writeCall?.[0] as string;
+    const filename = filePath.split("/").pop() ?? "";
     // 001- (4) + sanitized title (max 50) + .md (3) = max 57 chars
     expect(filename.length).toBeLessThanOrEqual(57);
   });

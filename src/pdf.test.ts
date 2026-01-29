@@ -41,8 +41,8 @@ describe("main", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -53,8 +53,8 @@ describe("main", () => {
 
   it("converts markdown to PDF successfully", async () => {
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(mdToPdf).mockResolvedValue({ filename: "output/book.pdf" } as any);
-    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 * 1024 * 2 } as any); // 2 MB
+    vi.mocked(mdToPdf).mockResolvedValue({ filename: "output/book.pdf", content: Buffer.from("") });
+    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 * 1024 * 2 } as fs.Stats); // 2 MB
 
     const { main } = await import("./pdf.js");
     await main();
@@ -88,7 +88,7 @@ describe("main", () => {
 
   it("exits with error when PDF generation fails", async () => {
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(mdToPdf).mockResolvedValue({ filename: undefined } as any);
+    vi.mocked(mdToPdf).mockResolvedValue({ filename: undefined, content: Buffer.from("") });
     mockExit.mockImplementation(() => {
       throw new Error("process.exit called");
     });
@@ -103,8 +103,8 @@ describe("main", () => {
 
   it("displays correct file size in output", async () => {
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(mdToPdf).mockResolvedValue({ filename: "output/book.pdf" } as any);
-    vi.mocked(fs.stat).mockResolvedValue({ size: 5 * 1024 * 1024 } as any); // 5 MB
+    vi.mocked(mdToPdf).mockResolvedValue({ filename: "output/book.pdf", content: Buffer.from("") });
+    vi.mocked(fs.stat).mockResolvedValue({ size: 5 * 1024 * 1024 } as fs.Stats); // 5 MB
 
     const { main } = await import("./pdf.js");
     await main();

@@ -128,7 +128,7 @@ export function run(command: string, description: string): StepTiming {
  *
  * @throws Exits with code 1 if no URL provided or any step fails
  */
-export async function main(): Promise<void> {
+export function main(): void {
   const { startUrl, name, wait, delay, skipUrls, urlPattern, showHelp } = parseArgs();
 
   if (showHelp) {

@@ -4,8 +4,56 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "correctness": {
+        "recommended": true,
+        "noNodejsModules": "off",
+        "noUndeclaredDependencies": "off",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "error"
+      },
       "suspicious": {
-        "noExplicitAny": "warn"
+        "recommended": true,
+        "noExplicitAny": "error",
+        "noConsole": "off",
+        "noEmptyBlockStatements": "error",
+        "noImplicitAnyLet": "error",
+        "useAwait": "error"
+      },
+      "style": {
+        "recommended": true,
+        "noDefaultExport": "off",
+        "useNamingConvention": "off",
+        "noParameterProperties": "off",
+        "noNonNullAssertion": "error",
+        "useConst": "error",
+        "useExportType": "error",
+        "useImportType": "error",
+        "useTemplate": "error",
+        "noUselessElse": "error",
+        "useCollapsedElseIf": "error"
+      },
+      "complexity": {
+        "recommended": true,
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": {
+            "maxAllowedComplexity": 20
+          }
+        },
+        "noForEach": "off",
+        "useLiteralKeys": "error",
+        "useOptionalChain": "error"
+      },
+      "security": {
+        "recommended": true,
+        "noGlobalEval": "error"
+      },
+      "performance": {
+        "recommended": true,
+        "noAccumulatingSpread": "warn",
+        "noBarrelFile": "off",
+        "noDelete": "warn"
       }
     }
   },

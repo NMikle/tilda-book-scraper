@@ -145,8 +145,8 @@ describe("main", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -159,14 +159,14 @@ describe("main", () => {
     const { main } = await import("./merge.js");
 
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(fs.readFile).mockImplementation(async (path) => {
-      if (String(path).includes("meta.json")) return JSON.stringify(mockMeta);
-      if (String(path).includes("001-chapter-1.md")) return mockChapter1;
-      if (String(path).includes("002-chapter-2.md")) return mockChapter2;
-      throw new Error("File not found");
+    vi.mocked(fs.readFile).mockImplementation((path) => {
+      if (String(path).includes("meta.json")) return Promise.resolve(JSON.stringify(mockMeta));
+      if (String(path).includes("001-chapter-1.md")) return Promise.resolve(mockChapter1);
+      if (String(path).includes("002-chapter-2.md")) return Promise.resolve(mockChapter2);
+      return Promise.reject(new Error("File not found"));
     });
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as any);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as fs.Stats);
 
     await main();
 
@@ -268,14 +268,14 @@ describe("main", () => {
     const { main } = await import("./merge.js");
 
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(fs.readFile).mockImplementation(async (path) => {
-      if (String(path).includes("meta.json")) return JSON.stringify(mockMeta);
-      if (String(path).includes("001-chapter-1.md")) return mockChapter1;
+    vi.mocked(fs.readFile).mockImplementation((path) => {
+      if (String(path).includes("meta.json")) return Promise.resolve(JSON.stringify(mockMeta));
+      if (String(path).includes("001-chapter-1.md")) return Promise.resolve(mockChapter1);
       // Chapter 2 is missing
-      throw new Error("ENOENT");
+      return Promise.reject(new Error("ENOENT"));
     });
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fs.stat).mockResolvedValue({ size: 512 } as any);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 512 } as fs.Stats);
 
     await main();
 
@@ -288,14 +288,14 @@ describe("main", () => {
     const { main } = await import("./merge.js");
 
     vi.mocked(fs.access).mockResolvedValue(undefined);
-    vi.mocked(fs.readFile).mockImplementation(async (path) => {
-      if (String(path).includes("meta.json")) return JSON.stringify(mockMeta);
-      if (String(path).includes("001-chapter-1.md")) return mockChapter1;
-      if (String(path).includes("002-chapter-2.md")) return mockChapter2;
-      throw new Error("File not found");
+    vi.mocked(fs.readFile).mockImplementation((path) => {
+      if (String(path).includes("meta.json")) return Promise.resolve(JSON.stringify(mockMeta));
+      if (String(path).includes("001-chapter-1.md")) return Promise.resolve(mockChapter1);
+      if (String(path).includes("002-chapter-2.md")) return Promise.resolve(mockChapter2);
+      return Promise.reject(new Error("File not found"));
     });
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as any);
+    vi.mocked(fs.stat).mockResolvedValue({ size: 1024 } as fs.Stats);
 
     await main();
 

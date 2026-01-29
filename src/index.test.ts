@@ -124,7 +124,7 @@ describe("run", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -167,8 +167,8 @@ describe("main", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
-    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -187,7 +187,7 @@ describe("main", () => {
 
     const { main } = await import("./index.js");
 
-    await expect(main()).rejects.toThrow("process.exit called");
+    expect(() => main()).toThrow("process.exit called");
 
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
     expect(mockExit).toHaveBeenCalledWith(1);
@@ -257,7 +257,7 @@ describe("main", () => {
 
     const { main } = await import("./index.js");
 
-    await expect(main()).rejects.toThrow("process.exit called");
+    expect(() => main()).toThrow("process.exit called");
 
     expect(mockConsoleError).toHaveBeenCalledWith("\nError:", expect.any(Error));
     expect(mockExit).toHaveBeenCalledWith(1);
@@ -304,7 +304,7 @@ describe("main", () => {
 
     const { main } = await import("./index.js");
 
-    await expect(main()).rejects.toThrow("process.exit called");
+    expect(() => main()).toThrow("process.exit called");
 
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
     expect(mockExit).toHaveBeenCalledWith(0);
