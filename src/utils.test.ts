@@ -10,6 +10,7 @@ import {
   getStringArg,
   globToRegex,
   hasHelpFlag,
+  resolveUrl,
   sanitizeFilename,
   transformTildaImageUrl,
   validateBookMeta,
@@ -560,5 +561,62 @@ describe("getPositionalArg", () => {
 
   it("handles positional before flags", () => {
     expect(getPositionalArg(["https://example.com", "--wait", "1000"], ["--wait"])).toBe("https://example.com");
+  });
+});
+
+describe("resolveUrl", () => {
+  const baseUrl = "https://example.com";
+  const baseUrlWithPath = "https://example.com/dir/page.html";
+
+  it("resolves absolute URLs (returns as-is)", () => {
+    expect(resolveUrl("https://other.com/page", baseUrl)).toBe("https://other.com/page");
+    expect(resolveUrl("http://other.com/page", baseUrl)).toBe("http://other.com/page");
+  });
+
+  it("resolves root-relative URLs", () => {
+    expect(resolveUrl("/page", baseUrl)).toBe("https://example.com/page");
+    expect(resolveUrl("/path/to/page", baseUrl)).toBe("https://example.com/path/to/page");
+    expect(resolveUrl("/page", baseUrlWithPath)).toBe("https://example.com/page");
+  });
+
+  it("resolves relative URLs against base path", () => {
+    expect(resolveUrl("page", "https://example.com/dir/")).toBe("https://example.com/dir/page");
+    expect(resolveUrl("page.html", "https://example.com/dir/index.html")).toBe("https://example.com/dir/page.html");
+    expect(resolveUrl("../page", "https://example.com/dir/sub/")).toBe("https://example.com/dir/page");
+  });
+
+  it("handles URLs with query strings", () => {
+    expect(resolveUrl("/page?foo=bar", baseUrl)).toBe("https://example.com/page?foo=bar");
+    expect(resolveUrl("?query=value", "https://example.com/page")).toBe("https://example.com/page?query=value");
+  });
+
+  it("handles URLs with fragments", () => {
+    expect(resolveUrl("/page#section", baseUrl)).toBe("https://example.com/page#section");
+    expect(resolveUrl("#anchor", "https://example.com/page")).toBe("https://example.com/page#anchor");
+  });
+
+  it("handles protocol-relative URLs", () => {
+    expect(resolveUrl("//other.com/page", baseUrl)).toBe("https://other.com/page");
+    expect(resolveUrl("//other.com/page", "http://example.com")).toBe("http://other.com/page");
+  });
+
+  it("normalizes double slashes in paths", () => {
+    expect(resolveUrl("//example.com//page", baseUrl)).toBe("https://example.com//page");
+  });
+
+  it("handles edge case with trailing slash on base", () => {
+    expect(resolveUrl("page", "https://example.com/")).toBe("https://example.com/page");
+    expect(resolveUrl("page", "https://example.com")).toBe("https://example.com/page");
+  });
+
+  it("returns null for invalid URLs", () => {
+    expect(resolveUrl("", "not-a-url")).toBeNull();
+    expect(resolveUrl("http://", baseUrl)).toBeNull();
+    expect(resolveUrl("https://", baseUrl)).toBeNull();
+  });
+
+  it("handles empty href", () => {
+    expect(resolveUrl("", baseUrl)).toBe("https://example.com/");
+    expect(resolveUrl("", baseUrlWithPath)).toBe("https://example.com/dir/page.html");
   });
 });

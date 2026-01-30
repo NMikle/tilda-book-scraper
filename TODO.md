@@ -13,7 +13,7 @@ Project roadmap and planned improvements.
 | merge.ts | 94% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
 | utils.ts | 89% | :yellow_circle: |
-| scrape.ts | 56% | :red_circle: |
+| scrape.ts | 57% | :red_circle: |
 <!-- COVERAGE-END -->
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
@@ -50,7 +50,6 @@ Technical debt and code quality issues identified during code review.
 
 ### Input Validation & Security
 
-- [ ] **Unsafe URL concatenation** (`scrape.ts:289-293`) - Manual string concatenation for URL joining. Use `new URL(href, baseUrl)` instead.
 - [ ] **No rate limiting / backoff** - No exponential backoff for failed requests. Could hammer servers on transient failures.
 
 ### Testing
@@ -97,3 +96,5 @@ Technical debt and code quality issues identified during code review.
 - [x] Add Biome linter for consistent code style and catching issues
 - [x] Add pre-commit hooks with husky/lint-staged
 - [x] Add GitHub Actions CI to run tests and linting on PRs
+- [x] Increase Biome linter strictness to industry-standard (noExplicitAny as error, stricter rules)
+- [x] Fix unsafe URL concatenation in scrape.ts - use `new URL(href, baseUrl)` instead of string concat

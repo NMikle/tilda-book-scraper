@@ -424,3 +424,25 @@ export function validateBookMeta(data: unknown): MetaValidationResult {
 
   return { isValid: true };
 }
+
+/**
+ * Safely resolve a potentially relative URL against a base URL.
+ * Uses the URL constructor which handles all edge cases correctly.
+ *
+ * @param href - The href to resolve (can be absolute, root-relative, or relative)
+ * @param baseUrl - The base URL to resolve against
+ * @returns The resolved absolute URL, or null if the URL is invalid
+ *
+ * @example
+ * resolveUrl('/page', 'https://example.com') // 'https://example.com/page'
+ * resolveUrl('page', 'https://example.com/dir/') // 'https://example.com/dir/page'
+ * resolveUrl('https://other.com', 'https://example.com') // 'https://other.com'
+ * resolveUrl('invalid:url', 'https://example.com') // null
+ */
+export function resolveUrl(href: string, baseUrl: string): string | null {
+  try {
+    return new URL(href, baseUrl).href;
+  } catch {
+    return null;
+  }
+}

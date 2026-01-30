@@ -354,18 +354,16 @@ async function extractTocLinks(page: Page, baseUrl: string): Promise<string[]> {
         if (href.includes("t.me") || href.includes("vk.com") || href.includes("youtube.com")) return;
         if (href.includes("instagram") || href.includes("facebook") || href.includes("twitter")) return;
 
-        // Resolve relative URLs
-        let fullUrl = href;
-        if (!href.startsWith("http")) {
-          fullUrl = href.startsWith("/") ? baseUrl + href : `${baseUrl}/${href}`;
+        // Resolve relative URLs using URL constructor (handles all edge cases safely)
+        let fullUrl: string;
+        try {
+          fullUrl = new URL(href, baseUrl).href;
+        } catch {
+          return; // Invalid URL, skip
         }
 
         // Only include links to the same host
-        try {
-          if (new URL(fullUrl).host !== baseHost) return;
-        } catch {
-          return;
-        }
+        if (new URL(fullUrl).host !== baseHost) return;
 
         // Extract path from full URL
         const urlPath = new URL(fullUrl).pathname;
@@ -403,9 +401,11 @@ async function findNextChapterLink(page: Page, baseUrl: string): Promise<string 
       if (text.includes("next") || text.includes("следующ") || text.includes("далее") || text.includes("→")) {
         const href = btn.getAttribute("href");
         if (href && !href.startsWith("#")) {
-          if (href.startsWith("http")) return href;
-          if (href.startsWith("/")) return baseUrl + href;
-          return `${baseUrl}/${href}`;
+          try {
+            return new URL(href, baseUrl).href;
+          } catch {
+            // Invalid URL, continue searching
+          }
         }
       }
     }
