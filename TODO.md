@@ -5,14 +5,14 @@ Project roadmap and planned improvements.
 ## High Priority
 
 <!-- COVERAGE-START -->
-- [ ] **Increase test coverage to 90%+** - Overall: 85%
+- [ ] **Increase test coverage to 90%+** - Overall: 86%
 
 | File | Coverage | Status |
 |------|----------|--------|
 | index.ts | 97% | :green_circle: |
 | merge.ts | 94% | :green_circle: |
+| utils.ts | 91% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
-| utils.ts | 89% | :yellow_circle: |
 | scrape.ts | 57% | :red_circle: |
 <!-- COVERAGE-END -->
 
@@ -47,10 +47,6 @@ Technical debt and code quality issues identified during code review.
 ### Architecture & Design
 
 - [ ] **Mixed concerns in scrape.ts** - Single file handles CLI parsing, browser lifecycle, DOM extraction, image processing, and file I/O. Consider splitting into smaller modules.
-
-### Input Validation & Security
-
-- [ ] **No rate limiting / backoff** - No exponential backoff for failed requests. Could hammer servers on transient failures.
 
 ### Testing
 
@@ -98,3 +94,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Add GitHub Actions CI to run tests and linting on PRs
 - [x] Increase Biome linter strictness to industry-standard (noExplicitAny as error, stricter rules)
 - [x] Fix unsafe URL concatenation in scrape.ts - use `new URL(href, baseUrl)` instead of string concat
+- [x] Add exponential backoff for failed requests in image downloads

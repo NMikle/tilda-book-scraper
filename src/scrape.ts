@@ -18,6 +18,7 @@ import sharp from "sharp";
 import TurndownService from "turndown";
 import type { BookMeta, ChapterMeta } from "./types.js";
 import {
+  fetchWithRetry,
   getBaseUrl,
   getMultiStringArg,
   getNullableStringArg,
@@ -180,6 +181,7 @@ export function progressBar(current: number, total: number, title: string): void
  * Download an image from a URL and save it locally.
  * Transforms Tilda placeholder URLs to actual image URLs.
  * Falls back to original URL if transformed URL fails.
+ * Uses exponential backoff retry for transient failures.
  *
  * @param url - The image URL to download
  * @param index - Image index for filename generation
@@ -191,11 +193,11 @@ export async function downloadImage(url: string, index: number, stats?: ImageSta
   const actualUrl = transformTildaImageUrl(url);
 
   try {
-    const response = await fetch(actualUrl);
+    const response = await fetchWithRetry(actualUrl);
     if (!response.ok) {
       // If optimized URL fails, try original
       if (actualUrl !== url) {
-        const fallbackResponse = await fetch(url);
+        const fallbackResponse = await fetchWithRetry(url);
         if (!fallbackResponse.ok) {
           if (stats) stats.failedCount++;
           return null;

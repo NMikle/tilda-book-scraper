@@ -446,3 +446,79 @@ export function resolveUrl(href: string, baseUrl: string): string | null {
     return null;
   }
 }
+
+// ============================================================================
+// Retry Helpers
+// ============================================================================
+
+/** Maximum number of retry attempts for failed requests */
+export const MAX_RETRIES = 3;
+
+/** Initial backoff delay in milliseconds (doubles with each retry) */
+export const INITIAL_BACKOFF_MS = 500;
+
+/**
+ * Sleep for a specified duration.
+ *
+ * @param ms - Duration to sleep in milliseconds
+ * @returns Promise that resolves after the delay
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch a URL with exponential backoff retry on failure.
+ * Retries on network errors and 5xx server errors.
+ * Does not retry on 4xx client errors (except 429 Too Many Requests).
+ *
+ * @param url - URL to fetch
+ * @param maxRetries - Maximum number of retry attempts (default: MAX_RETRIES)
+ * @param initialBackoffMs - Initial backoff delay in ms (default: INITIAL_BACKOFF_MS)
+ * @returns Response object if successful
+ * @throws Error if all retries are exhausted
+ *
+ * @example
+ * const response = await fetchWithRetry('https://example.com/image.png');
+ * if (response.ok) {
+ *   const buffer = await response.arrayBuffer();
+ * }
+ */
+export async function fetchWithRetry(
+  url: string,
+  maxRetries: number = MAX_RETRIES,
+  initialBackoffMs: number = INITIAL_BACKOFF_MS,
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+
+      // Don't retry on client errors (4xx) except 429 Too Many Requests
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
+      }
+
+      // Retry on server errors (5xx) or 429
+      if (response.status >= 500 || response.status === 429) {
+        if (attempt < maxRetries) {
+          const backoffMs = initialBackoffMs * 2 ** attempt;
+          await sleep(backoffMs);
+          continue;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxRetries) {
+        const backoffMs = initialBackoffMs * 2 ** attempt;
+        await sleep(backoffMs);
+      }
+    }
+  }
+
+  throw lastError ?? new Error("Fetch failed after retries");
+}

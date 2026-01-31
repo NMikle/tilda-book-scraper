@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deduplicateContentParts,
+  fetchWithRetry,
   generateAnchor,
   getBaseUrl,
   getMultiStringArg,
@@ -10,8 +11,11 @@ import {
   getStringArg,
   globToRegex,
   hasHelpFlag,
+  INITIAL_BACKOFF_MS,
+  MAX_RETRIES,
   resolveUrl,
   sanitizeFilename,
+  sleep,
   transformTildaImageUrl,
   validateBookMeta,
   validateUrl,
@@ -618,5 +622,136 @@ describe("resolveUrl", () => {
   it("handles empty href", () => {
     expect(resolveUrl("", baseUrl)).toBe("https://example.com/");
     expect(resolveUrl("", baseUrlWithPath)).toBe("https://example.com/dir/page.html");
+  });
+});
+
+describe("retry constants", () => {
+  it("has correct default values", () => {
+    expect(MAX_RETRIES).toBe(3);
+    expect(INITIAL_BACKOFF_MS).toBe(500);
+  });
+});
+
+describe("sleep", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("resolves after specified duration", async () => {
+    const promise = sleep(1000);
+    let resolved = false;
+    promise.then(() => {
+      resolved = true;
+    });
+
+    expect(resolved).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
+    expect(resolved).toBe(true);
+  });
+
+  it("resolves immediately with zero delay", async () => {
+    const promise = sleep(0);
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+  });
+});
+
+describe("fetchWithRetry", () => {
+  let mockFetch: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    mockFetch = vi.spyOn(global, "fetch");
+  });
+
+  afterEach(() => {
+    mockFetch.mockRestore();
+  });
+
+  it("returns response on successful fetch", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    } as Response);
+
+    const response = await fetchWithRetry("https://example.com/image.png");
+    expect(response.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 4xx response without retrying", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    } as Response);
+
+    const response = await fetchWithRetry("https://example.com/image.png");
+    expect(response.status).toBe(404);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries on 5xx server error with exponential backoff", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 500 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 500 } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    // Use very short backoff for testing
+    const response = await fetchWithRetry("https://example.com/image.png", 3, 1);
+    expect(response.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries on 429 Too Many Requests", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 429 } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    const response = await fetchWithRetry("https://example.com/image.png", 3, 1);
+    expect(response.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries on network error", async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error("Network error"))
+      .mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    const response = await fetchWithRetry("https://example.com/image.png", 3, 1);
+    expect(response.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws after exhausting all retries on network error", async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error("Network error"))
+      .mockRejectedValueOnce(new Error("Network error"))
+      .mockRejectedValueOnce(new Error("Network error"));
+
+    await expect(fetchWithRetry("https://example.com/image.png", 2, 1)).rejects.toThrow("Network error");
+    expect(mockFetch).toHaveBeenCalledTimes(3); // initial + 2 retries
+  });
+
+  it("returns last error response after exhausting retries on 5xx", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 503 } as Response);
+
+    const response = await fetchWithRetry("https://example.com/image.png", 2, 1);
+    expect(response.status).toBe(503);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("uses default retry parameters", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    await fetchWithRetry("https://example.com/image.png");
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

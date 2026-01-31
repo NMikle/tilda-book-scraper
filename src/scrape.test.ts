@@ -29,9 +29,19 @@ vi.mock("sharp", () => ({
   })),
 }));
 
+// Mock fetchWithRetry from utils to isolate downloadImage tests from retry logic
+vi.mock("./utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./utils.js")>();
+  return {
+    ...original,
+    fetchWithRetry: vi.fn(),
+  };
+});
+
 import * as fs from "node:fs/promises";
 // Import mocked modules
 import puppeteer from "puppeteer";
+import { fetchWithRetry } from "./utils.js";
 
 describe("parseArgs", () => {
   it("returns defaults when no args provided", () => {
@@ -231,22 +241,17 @@ describe("createImageStats", () => {
 });
 
 describe("downloadImage", () => {
-  let mockFetch: ReturnType<typeof vi.spyOn>;
+  const mockFetchWithRetry = vi.mocked(fetchWithRetry);
   let stats: ImageStats;
 
   beforeEach(() => {
     stats = createImageStats();
     vi.clearAllMocks();
-    mockFetch = vi.spyOn(global, "fetch");
-  });
-
-  afterEach(() => {
-    mockFetch.mockRestore();
   });
 
   it("downloads and saves image successfully", async () => {
     const imageBuffer = Buffer.from("fake-image-data");
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
     } as unknown as Response);
@@ -254,12 +259,12 @@ describe("downloadImage", () => {
     const result = await downloadImage("https://static.tildacdn.com/tild1234/image.png", 0);
 
     expect(result).toBe("img-0000.jpg");
-    expect(mockFetch).toHaveBeenCalledWith("https://static.tildacdn.com/tild1234/image.png");
+    expect(mockFetchWithRetry).toHaveBeenCalledWith("https://static.tildacdn.com/tild1234/image.png");
   });
 
   it("transforms Tilda placeholder URLs before downloading", async () => {
     const imageBuffer = Buffer.from("fake-image-data");
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
     } as unknown as Response);
@@ -267,18 +272,18 @@ describe("downloadImage", () => {
     await downloadImage("https://thb.tildacdn.com/tild1234/-/empty/image.png", 1);
 
     // Verify the URL was transformed from thb (placeholder) to static (actual)
-    expect(mockFetch).toHaveBeenCalledWith("https://static.tildacdn.com/tild1234/image.png");
+    expect(mockFetchWithRetry).toHaveBeenCalledWith("https://static.tildacdn.com/tild1234/image.png");
   });
 
   it("falls back to original URL when transformed URL fails", async () => {
     const imageBuffer = Buffer.from("fake-image-data");
     // First call (transformed URL) fails
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: false,
       status: 404,
     } as Response);
     // Second call (original URL) succeeds
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
     } as unknown as Response);
@@ -286,17 +291,17 @@ describe("downloadImage", () => {
     const result = await downloadImage("https://thb.tildacdn.com/tild1234/-/empty/image.png", 2);
 
     expect(result).toBe("img-0002.jpg");
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetchWithRetry).toHaveBeenCalledTimes(2);
   });
 
   it("returns null and increments counter when both URLs fail", async () => {
     // First call (transformed URL) fails
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: false,
       status: 404,
     } as Response);
     // Second call (original URL) also fails
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: false,
       status: 404,
     } as Response);
@@ -308,7 +313,8 @@ describe("downloadImage", () => {
   });
 
   it("returns null and increments counter on network error", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    // fetchWithRetry throws after exhausting retries
+    mockFetchWithRetry.mockRejectedValueOnce(new Error("Network error"));
 
     const result = await downloadImage("https://static.tildacdn.com/tild1234/image.png", 4, stats);
 
@@ -318,19 +324,19 @@ describe("downloadImage", () => {
 
   it("handles non-Tilda URLs without transformation", async () => {
     const imageBuffer = Buffer.from("fake-image-data");
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
     } as unknown as Response);
 
     await downloadImage("https://example.com/image.png", 5);
 
-    expect(mockFetch).toHaveBeenCalledWith("https://example.com/image.png");
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetchWithRetry).toHaveBeenCalledWith("https://example.com/image.png");
+    expect(mockFetchWithRetry).toHaveBeenCalledTimes(1);
   });
 
   it("returns null when non-Tilda URL fails", async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockFetchWithRetry.mockResolvedValueOnce({
       ok: false,
       status: 404,
     } as Response);
@@ -339,7 +345,7 @@ describe("downloadImage", () => {
 
     expect(result).toBeNull();
     // No fallback for non-Tilda URLs, so only one fetch
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetchWithRetry).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -639,8 +645,8 @@ describe("main", () => {
   it("shows warning when images fail to download", async () => {
     process.argv = ["node", "scrape.ts", "https://example.com/book"];
 
-    // Mock fetch to fail for image downloads
-    const mockFetch = vi.spyOn(global, "fetch").mockResolvedValue({
+    // Mock fetchWithRetry to fail for image downloads
+    vi.mocked(fetchWithRetry).mockResolvedValue({
       ok: false,
       status: 404,
     } as Response);
@@ -659,16 +665,14 @@ describe("main", () => {
 
     // Should show warning about failed images
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("Warning: 2 image(s) failed to download"));
-
-    mockFetch.mockRestore();
   });
 
   it("replaces remote image URLs with local paths when images download successfully", async () => {
     process.argv = ["node", "scrape.ts", "https://example.com/book"];
 
-    // Mock fetch to succeed for image downloads
+    // Mock fetchWithRetry to succeed for image downloads
     const imageBuffer = Buffer.from("fake-image-data");
-    const mockFetch = vi.spyOn(global, "fetch").mockResolvedValue({
+    vi.mocked(fetchWithRetry).mockResolvedValue({
       ok: true,
       arrayBuffer: () => Promise.resolve(imageBuffer),
     } as unknown as Response);
@@ -695,7 +699,5 @@ describe("main", () => {
     // Remote URL should be replaced with local path
     expect(content).toContain("../images/img-");
     expect(content).not.toContain(imageUrl);
-
-    mockFetch.mockRestore();
   });
 });
