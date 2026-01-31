@@ -10,12 +10,6 @@ import {
 } from "./scrape.js";
 
 // Mock all external dependencies
-vi.mock("puppeteer", () => ({
-  default: {
-    launch: vi.fn(),
-  },
-}));
-
 vi.mock("fs/promises", () => ({
   mkdir: vi.fn(),
   writeFile: vi.fn(),
@@ -29,6 +23,12 @@ vi.mock("sharp", () => ({
   })),
 }));
 
+// Mock browser module
+vi.mock("./browser.js", () => ({
+  launchBrowser: vi.fn(),
+  createPage: vi.fn(),
+}));
+
 // Mock fetchWithRetry from utils to isolate downloadImage tests from retry logic
 vi.mock("./utils.js", async (importOriginal) => {
   const original = await importOriginal<typeof import("./utils.js")>();
@@ -40,7 +40,7 @@ vi.mock("./utils.js", async (importOriginal) => {
 
 import * as fs from "node:fs/promises";
 // Import mocked modules
-import puppeteer from "puppeteer";
+import { createPage, launchBrowser } from "./browser.js";
 import { fetchWithRetry } from "./utils.js";
 
 describe("parseArgs", () => {
@@ -392,14 +392,11 @@ describe("saveImage", () => {
 });
 
 interface MockPage {
-  setUserAgent: ReturnType<typeof vi.fn>;
-  setViewport: ReturnType<typeof vi.fn>;
   goto: ReturnType<typeof vi.fn>;
   evaluate: ReturnType<typeof vi.fn>;
 }
 
 interface MockBrowser {
-  newPage: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
 }
 
@@ -420,21 +417,17 @@ describe("main", () => {
 
     // Create mock page
     mockPage = {
-      setUserAgent: vi.fn().mockResolvedValue(undefined),
-      setViewport: vi.fn().mockResolvedValue(undefined),
       goto: vi.fn().mockResolvedValue(undefined),
       evaluate: vi.fn(),
     };
 
     // Create mock browser
     mockBrowser = {
-      newPage: vi.fn().mockResolvedValue(mockPage),
       close: vi.fn().mockResolvedValue(undefined),
     };
 
-    vi.mocked(puppeteer.launch).mockResolvedValue(
-      mockBrowser as unknown as Awaited<ReturnType<typeof puppeteer.launch>>,
-    );
+    vi.mocked(launchBrowser).mockResolvedValue(mockBrowser as unknown as Awaited<ReturnType<typeof launchBrowser>>);
+    vi.mocked(createPage).mockResolvedValue(mockPage as unknown as Awaited<ReturnType<typeof createPage>>);
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
   });
@@ -508,7 +501,7 @@ describe("main", () => {
     expect(fs.mkdir).toHaveBeenCalledWith("output/images", { recursive: true });
   });
 
-  it("launches browser with correct options", async () => {
+  it("launches browser and creates page", async () => {
     process.argv = ["node", "scrape.ts", "https://example.com/book"];
 
     mockPage.evaluate
@@ -519,10 +512,8 @@ describe("main", () => {
     const { main } = await import("./scrape.js");
     await main();
 
-    expect(puppeteer.launch).toHaveBeenCalledWith({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    expect(launchBrowser).toHaveBeenCalled();
+    expect(createPage).toHaveBeenCalledWith(mockBrowser);
   });
 
   it("writes metadata file after scraping", async () => {

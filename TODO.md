@@ -5,15 +5,16 @@ Project roadmap and planned improvements.
 ## High Priority
 
 <!-- COVERAGE-START -->
-- [ ] **Increase test coverage to 90%+** - Overall: 86%
+- [ ] **Increase test coverage to 90%+** - Overall: 88%
 
 | File | Coverage | Status |
 |------|----------|--------|
+| browser.ts | 100% | :green_circle: |
 | index.ts | 97% | :green_circle: |
 | merge.ts | 94% | :green_circle: |
 | utils.ts | 91% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
-| scrape.ts | 57% | :red_circle: |
+| scrape.ts | 56% | :red_circle: |
 <!-- COVERAGE-END -->
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices

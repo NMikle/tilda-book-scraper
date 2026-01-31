@@ -13,9 +13,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import puppeteer, { type Page } from "puppeteer";
+import type { Page } from "puppeteer";
 import sharp from "sharp";
 import TurndownService from "turndown";
+import { createPage, launchBrowser } from "./browser.js";
 import type { BookMeta, ChapterMeta } from "./types.js";
 import {
   fetchWithRetry,
@@ -49,10 +50,6 @@ const TILDA_SKIP_BLOCK_TYPES = [
   "702", // Cover/hero block
   "210", // Form block
 ];
-
-// Realistic Chrome user agent to avoid bot detection
-const DEFAULT_USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 // Minimum number of links to consider a page as a table of contents
 // Pages with fewer links are treated as chapter pages with "next" navigation
@@ -510,23 +507,14 @@ export async function main(): Promise<void> {
   await fs.mkdir(IMAGES_DIR, { recursive: true });
 
   console.log("Launching browser...");
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchBrowser();
 
   // Register browser cleanup for graceful shutdown on Ctrl+C
   onInterrupt(async () => {
     await browser.close();
   });
 
-  const page = await browser.newPage();
-
-  // Set realistic user agent
-  await page.setUserAgent(DEFAULT_USER_AGENT);
-
-  // Set viewport
-  await page.setViewport({ width: 1280, height: 800 });
+  const page = await createPage(browser);
 
   const meta: BookMeta = {
     scrapedAt: new Date().toISOString(),
