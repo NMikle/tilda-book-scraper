@@ -335,53 +335,63 @@ async function extractTocLinks(page: Page, baseUrl: string): Promise<string[]> {
   const baseHost = new URL(baseUrl).host;
   return await page.evaluate(
     (baseUrl, baseHost) => {
+      // Social media and external domains to skip
+      const SKIP_DOMAINS = ["t.me", "vk.com", "youtube.com", "instagram", "facebook", "twitter"];
+      // Patterns that indicate non-content links
+      const SKIP_PATTERNS = ["mailto:", "tel:", "#"];
+
+      // Check if href should be skipped
+      function shouldSkipHref(href: string): boolean {
+        const hasSkipPattern = SKIP_PATTERNS.some((p) => href.includes(p));
+        const hasSocialDomain = SKIP_DOMAINS.some((d) => href.includes(d));
+        return hasSkipPattern || hasSocialDomain;
+      }
+
+      // Check if element is inside navigation/menu
+      function isInNavigation(element: Element): boolean {
+        const menuNav = element.closest('[class*="menu"]') || element.closest('[class*="nav"]');
+        const tildaMenu = element.closest(".t228") || element.closest(".t229");
+        return Boolean(menuNav || tildaMenu);
+      }
+
+      // Check if URL should be included as a chapter link
+      function isValidChapterUrl(fullUrl: string, currentPath: string): boolean {
+        try {
+          const urlObj = new URL(fullUrl);
+          if (urlObj.host !== baseHost) return false;
+          if (urlObj.pathname === "/" || urlObj.pathname === "") return false;
+          return urlObj.pathname !== currentPath;
+        } catch {
+          return false;
+        }
+      }
+
+      // Try to resolve href to full URL
+      function resolveHref(href: string): string | null {
+        try {
+          return new URL(href, baseUrl).href;
+        } catch {
+          return null;
+        }
+      }
+
       const links: string[] = [];
       const seen = new Set<string>();
       const currentPath = window.location.pathname;
 
-      // Find all links that look like chapter links (within content areas, not menus)
-      document.querySelectorAll("a[href]").forEach((a) => {
+      for (const a of document.querySelectorAll("a[href]")) {
         const href = a.getAttribute("href");
-        if (!href) return;
+        if (!href || shouldSkipHref(href)) continue;
 
-        // Skip anchors on the same page
-        if (href.startsWith("#")) return;
-        // Skip URLs with hash fragments (like /#rec123)
-        if (href.includes("#")) return;
-        // Skip external links
-        if (href.includes("mailto:") || href.includes("tel:")) return;
-        if (href.includes("t.me") || href.includes("vk.com") || href.includes("youtube.com")) return;
-        if (href.includes("instagram") || href.includes("facebook") || href.includes("twitter")) return;
-
-        // Resolve relative URLs using URL constructor (handles all edge cases safely)
-        let fullUrl: string;
-        try {
-          fullUrl = new URL(href, baseUrl).href;
-        } catch {
-          return; // Invalid URL, skip
-        }
-
-        // Only include links to the same host
-        if (new URL(fullUrl).host !== baseHost) return;
-
-        // Extract path from full URL
-        const urlPath = new URL(fullUrl).pathname;
-
-        // Skip homepage
-        if (urlPath === "/" || urlPath === "") return;
-
-        // Skip links in menu/navigation elements
-        if (a.closest('[class*="menu"]') || a.closest('[class*="nav"]')) return;
-        if (a.closest(".t228") || a.closest(".t229")) return; // Tilda menu blocks
-
-        // Skip if it's a link back to current page
-        if (urlPath === currentPath) return;
+        const fullUrl = resolveHref(href);
+        if (!fullUrl || !isValidChapterUrl(fullUrl, currentPath)) continue;
+        if (isInNavigation(a)) continue;
 
         if (!seen.has(fullUrl)) {
           seen.add(fullUrl);
           links.push(fullUrl);
         }
-      });
+      }
 
       return links;
     },
@@ -470,6 +480,114 @@ async function scrapeChapter(
   return { index, title, url, filename };
 }
 
+/** Result of a chapter scrape attempt */
+interface ChapterResult {
+  success: boolean;
+  chapter?: ChapterMeta;
+  error?: { index: number; url: string; message: string };
+}
+
+/**
+ * Filter chapter links based on skip URLs and URL pattern.
+ */
+function filterChapterLinks(links: string[], skipUrls: string[], urlPattern: string | null): string[] {
+  let filtered = links;
+
+  if (skipUrls.length > 0) {
+    filtered = filtered.filter((link) => !skipUrls.some((skip) => link.includes(skip)));
+  }
+
+  if (urlPattern) {
+    const regex = globToRegex(urlPattern);
+    filtered = filtered.filter((link) => regex.test(link));
+  }
+
+  return filtered;
+}
+
+/**
+ * Scrape chapters in TOC mode (from a list of links).
+ */
+async function scrapeTocChapters(
+  page: Page,
+  links: string[],
+  pageWait: number,
+  chapterDelay: number,
+  stats: ImageStats,
+): Promise<ChapterResult[]> {
+  const results: ChapterResult[] = [];
+
+  for (let i = 0; i < links.length; i++) {
+    try {
+      const chapter = await scrapeChapter(page, links[i], i, links.length, pageWait, stats);
+      results.push({ success: true, chapter });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      results.push({ success: false, error: { index: i, url: links[i], message } });
+      progressBar(i + 1, links.length, `FAILED: ${links[i].slice(-30)}`);
+    }
+
+    if (i < links.length - 1) {
+      await delay(chapterDelay + Math.random() * 500);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Scrape chapters in navigation mode (following next links).
+ */
+async function scrapeNavigationChapters(
+  page: Page,
+  startUrl: string,
+  baseUrl: string,
+  pageWait: number,
+  chapterDelay: number,
+  stats: ImageStats,
+): Promise<ChapterResult[]> {
+  const results: ChapterResult[] = [];
+  const visitedUrls = new Set<string>();
+  let currentUrl: string | null = startUrl;
+  let index = 0;
+
+  while (currentUrl) {
+    try {
+      const chapter = await scrapeChapter(page, currentUrl, index, undefined, pageWait, stats);
+      results.push({ success: true, chapter });
+      visitedUrls.add(currentUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      results.push({ success: false, error: { index, url: currentUrl, message } });
+      console.log(`  [${index + 1}] FAILED: ${currentUrl.slice(-40)}`);
+    }
+
+    const nextUrl = await findNextChapterLink(page, baseUrl);
+    if (nextUrl && !visitedUrls.has(nextUrl)) {
+      currentUrl = nextUrl;
+      index++;
+      await delay(chapterDelay + Math.random() * 500);
+    } else {
+      currentUrl = null;
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Print scrape summary and return exit code.
+ */
+function printScrapeSummary(chapters: ChapterMeta[], failedCount: number, imageFailedCount: number): number {
+  console.log(`\nDone! Scraped ${chapters.length} chapters.`);
+
+  if (imageFailedCount > 0) {
+    console.log(`Warning: ${imageFailedCount} image(s) failed to download.`);
+  }
+
+  return failedCount > 0 ? 1 : 0;
+}
+
 /**
  * Main entry point for the scraper.
  * Launches browser, navigates to start URL, and scrapes all chapters.
@@ -528,95 +646,51 @@ export async function main(): Promise<void> {
     await delay(pageWait);
 
     // Check if this is a TOC page (has multiple chapter links) or a chapter page
-    let links = await extractTocLinks(page, baseUrl);
+    const rawLinks = await extractTocLinks(page, baseUrl);
+    const links = filterChapterLinks(rawLinks, skipUrls, urlPattern);
 
-    // Filter links based on --skip and --url-pattern options
-    if (skipUrls.length > 0 || urlPattern) {
-      const originalCount = links.length;
-
-      if (skipUrls.length > 0) {
-        links = links.filter((link) => !skipUrls.some((skip) => link.includes(skip)));
-      }
-
-      if (urlPattern) {
-        const regex = globToRegex(urlPattern);
-        links = links.filter((link) => regex.test(link));
-      }
-
-      if (links.length !== originalCount) {
-        console.log(`Filtered ${originalCount - links.length} URLs (${originalCount} → ${links.length})`);
-      }
+    if (links.length !== rawLinks.length) {
+      console.log(`Filtered ${rawLinks.length - links.length} URLs (${rawLinks.length} → ${links.length})`);
     }
 
-    const failedChapters: { index: number; url: string; error: string }[] = [];
-
+    // Scrape chapters using appropriate mode
+    let results: ChapterResult[];
     if (links.length > TOC_LINK_THRESHOLD) {
-      // This looks like a TOC page - scrape all linked chapters
       console.log(`Found ${links.length} chapters. Scraping...\n`);
-
-      for (let i = 0; i < links.length; i++) {
-        try {
-          const chapterMeta = await scrapeChapter(page, links[i], i, links.length, pageWait, imageStats);
-          meta.chapters.push(chapterMeta);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          failedChapters.push({ index: i, url: links[i], error: message });
-          // Show failure in progress bar position
-          progressBar(i + 1, links.length, `FAILED: ${links[i].slice(-30)}`);
-        }
-
-        // Rate limiting - wait between chapters
-        if (i < links.length - 1) {
-          await delay(chapterDelay + Math.random() * 500);
-        }
-      }
+      results = await scrapeTocChapters(page, links, pageWait, chapterDelay, imageStats);
     } else {
-      // This is a chapter page - follow "next" links
       console.log("Following navigation links...\n");
+      results = await scrapeNavigationChapters(page, startUrl, baseUrl, pageWait, chapterDelay, imageStats);
+    }
 
-      let currentUrl: string | null = startUrl;
-      let index = 0;
-
-      while (currentUrl) {
-        try {
-          const chapterMeta = await scrapeChapter(page, currentUrl, index, undefined, pageWait, imageStats);
-          meta.chapters.push(chapterMeta);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          failedChapters.push({ index, url: currentUrl, error: message });
-          console.log(`  [${index + 1}] FAILED: ${currentUrl.slice(-40)}`);
-        }
-
-        // Find next chapter link
-        const nextUrl = await findNextChapterLink(page, baseUrl);
-
-        if (nextUrl && !meta.chapters.some((c) => c.url === nextUrl)) {
-          currentUrl = nextUrl;
-          index++;
-          await delay(chapterDelay + Math.random() * 500);
-        } else {
-          currentUrl = null;
-        }
+    // Collect successful chapters and failures
+    for (const result of results) {
+      if (result.success && result.chapter) {
+        meta.chapters.push(result.chapter);
       }
     }
+    const failedChapters = results
+      .filter(
+        (r): r is ChapterResult & { error: NonNullable<ChapterResult["error"]> } => !r.success && r.error !== undefined,
+      )
+      .map((r) => r.error);
 
     // Save metadata
     const metaPath = path.join(OUTPUT_DIR, "meta.json");
     await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), "utf-8");
     console.log(`\nSaved metadata to ${metaPath}`);
 
-    console.log(`\nDone! Scraped ${meta.chapters.length} chapters.`);
-
-    if (imageStats.failedCount > 0) {
-      console.log(`Warning: ${imageStats.failedCount} image(s) failed to download.`);
-    }
+    const exitCode = printScrapeSummary(meta.chapters, failedChapters.length, imageStats.failedCount);
 
     if (failedChapters.length > 0) {
       console.log(`\nFailed chapters (${failedChapters.length}):`);
       for (const { index, url } of failedChapters) {
         console.log(`  [${index + 1}] ${url}`);
       }
-      process.exit(1);
+    }
+
+    if (exitCode !== 0) {
+      process.exit(exitCode);
     }
   } catch (error) {
     console.error("Error:", error);

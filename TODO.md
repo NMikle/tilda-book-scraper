@@ -14,7 +14,7 @@ Project roadmap and planned improvements.
 | merge.ts | 94% | :green_circle: |
 | utils.ts | 91% | :green_circle: |
 | pdf.ts | 90% | :green_circle: |
-| scrape.ts | 56% | :red_circle: |
+| scrape.ts | 58% | :red_circle: |
 <!-- COVERAGE-END -->
 
 - [ ] **Code quality improvements** - Ensure all code follows best practices
@@ -44,10 +44,6 @@ Project roadmap and planned improvements.
 ## Needs Improvement
 
 Technical debt and code quality issues identified during code review.
-
-### Architecture & Design
-
-- [ ] **Mixed concerns in scrape.ts** - Single file handles CLI parsing, browser lifecycle, DOM extraction, image processing, and file I/O. Consider splitting into smaller modules.
 
 ### Testing
 
@@ -96,3 +92,4 @@ Technical debt and code quality issues identified during code review.
 - [x] Increase Biome linter strictness to industry-standard (noExplicitAny as error, stricter rules)
 - [x] Fix unsafe URL concatenation in scrape.ts - use `new URL(href, baseUrl)` instead of string concat
 - [x] Add exponential backoff for failed requests in image downloads
+- [x] Extract browser lifecycle to browser.ts and refactor scrape.ts to reduce cognitive complexity
